@@ -1,2 +1,2 @@
 python grab_data.py -i file_name -e 2:ALL;1:STDDEV;3:STDDEV,STDERR
-phthon grab_data.py -input_file file_name -exclude 2:ALL;1:STDDEV;3:STDDEV,STDERR
+phthon grab_data.py --input_file file_name --exclude 2:ALL;1:STDDEV;3:STDDEV,STDERR
