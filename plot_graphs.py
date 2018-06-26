@@ -6,12 +6,12 @@ from operator import add, sub
 
 #############################################################
 # Global Plot Visual Values
-chart_title_font = dict(family = 'Courier New, monospace',
-			       size = 30,
+chart_title_font = dict(family = 'Times New Roman',
+			       size = 24,
 			       color = '#7f7f7f'
 		      )
-title_fonts = dict(family = 'Courier New, monospace',
-			       size = 18,
+title_fonts = dict(family = 'Times New Roman',
+			       size = 24,
 			       color = '#7f7f7f'
 		      )
 
@@ -46,11 +46,36 @@ def create_graphs(file_name):
         line = fp.readline()
         line_split = line.split(',')
         if line_split[0].replace('# ','') == 'line':
-            all_trace[x].append(go.Scatter(x=x_vals,name=line_split[len(line_split) - 1]))
-            all_layouts.append(go.Layout(title=line_split[1],
+            all_trace[x].append(go.Scatter(x=x_vals,name=line_split[len(line_split) - 1],
+                                           line = dict(width = 1,
+                                                       dash = 'solid',
+                                                       shape = 'spline'
+                                                  ),
+                                           marker = dict(color = ('rgb(29, 130, 39)'),
+                                                         opacity = 1,
+                                                         size = 7,
+                                                         line = dict(width = 1.5)
+                                                    ),
+                                           mode = 'lines+markers+text',
+                                           text = ['pt1', 'pt2', 'pt3', 'pt4', 'pt5', 'pt6', 'pt7'],
+                                           textposition = 'bottom center'
+                                          )
+                               )
+            all_layouts.append(go.Layout(title = line_split[1],
 		                                 titlefont = chart_title_font, 
                                           xaxis = dict(title = x_title,
-		                                               titlefont = title_fonts 
+		                                               titlefont = title_fonts,
+                                                       autorange = False,
+                                                       gridwidth = 2,
+                                                       range = [0, x_vals[len(x_vals) - 1] + 10],
+                                                       showgrid = True,
+                                                       showline = False,
+                                                       type = 'linear',
+                                                       zeroline = True,
+                                                       zerolinewidth = 2,
+                                                       showticklabels = True,
+                                                       tickcolor = 'rgb(0, 0, 0)',
+                                                       ticks = 'outside'
                                                   )
                                          )
                                )
@@ -74,11 +99,24 @@ def create_graphs(file_name):
                 y_val_str = fp.readline()
                 y_val = [float(s) for s in y_val_str.split() if isfloat(s)]
                 all_layouts[x].yaxis = dict(title = line_split[1],
-		                                    titlefont = title_fonts
+		                                    titlefont = title_fonts,
+                                            gridwidth = 2,
+                                            autorange = False,
+                                            range = [0, y_val[len(y_val) - 1] + 100],
+                                            showgrid = True,
+                                            showline = False,
+                                            type = 'linear',
+                                            zerolinewidth = 2,
+                                            showticklabels = True,
+                                            tickcolor = 'rgb(0, 0, 0)',
+                                            ticks = 'outside'
                                             )
                 for chart in all_trace[x]:
                     if line_split[len(line_split) - 1] == chart.name:
-                        chart.y = y_val                       
+                        chart.y = y_val
+                        # chart.mode = 'lines+markers+text',
+                        # chart.text = [y_val],
+                        # chart.textposition = 'bottom center'
             elif line_split[0].replace('# ','') == 'STDDEV':
                 std_dev_str = fp.readline()
                 std_dev = [float(s) for s in std_dev_str.split() if isfloat(s)]
@@ -90,7 +128,7 @@ def create_graphs(file_name):
                                                        mode = 'lines',
                                                        marker = dict(color = '#444'),
                                                        line = dict(width = 0),
-                                                       fillcolor = 'rgba(68, 68, 68, 0.3)',
+                                                       fillcolor = 'rgba(70, 30, 180, 0.3)',
                                                        fill = 'tonexty'
                                                        )
                                             )
@@ -100,7 +138,7 @@ def create_graphs(file_name):
                                                        mode = 'lines',
                                                        marker = dict(color = '#444'),
                                                        line = dict(width = 0),
-                                                       fillcolor = 'rgba(68, 68, 68, 0.3)',
+                                                       fillcolor = 'rgba(135, 206, 250, 0.3)',
                                                        fill = 'tonexty'
                                                        )
                                             )
@@ -111,6 +149,9 @@ def create_graphs(file_name):
                     if line_split[len(line_split) - 1] == chart.name:
                         chart.error_y = dict(type = 'data',
                                              array = std_err,
+                                             color = '#000',
+                                             thickness = 1.5,
+                                             width = 3,
                                              visible = True
                                         )
             else:
