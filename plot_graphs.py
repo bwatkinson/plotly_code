@@ -15,6 +15,9 @@ title_fonts = dict(family = 'Times New Roman',
 			       color = '#7f7f7f'
 		      )
 
+std_dev_up_label = 'Upper Bound Std. Dev'
+std_dev_down_label = 'Lower Bound Std. Dev'
+
 #############################################################
 
 def isfloat(x):
@@ -24,12 +27,88 @@ def isfloat(x):
     except:
         return False
 
-def create_graphs(file_name):
-    fp = open(file_name, 'r')
+def remove_from_all_traces(traces, exclude_vals):
+    for remove in exclude_vals:
+        if remove == 'STDDEV':
+            for curr_trace in traces:
+                for x in xrange(len(curr_trace)):
+                    for this_trace_item in curr_trace:
+                        if this_trace_item.name == std_dev_up_label:
+                            del curr_trace[curr_trace.index(this_trace_item)]
+                        elif this_trace_item.name == std_dev_down_label:
+                            del curr_trace[curr_trace.index(this_trace_item)]
+                        else:
+                            pass
+        elif remove == 'STDERR':
+            for curr_trace in traces:
+                for this_trace_item in curr_trace:
+                    try:
+                        this_trace_item.error_y = dict()
+                    except AttributeError:
+                        pass
+        else:
+            # Unrecognized value to remove
+            print 'Unrecognized trace value ' + remove + ' in exclude list'
 
-    # Getting vals
+
+
+def remove_from_single_trace(trace, exclude_vals):
+    for remove in exclude_vals:
+        if remove == 'STDDEV':
+            for x in xrange(len(trace)):
+                for curr_trace in trace:
+                    if curr_trace.name == std_dev_up_label:
+                        del trace[trace.index(curr_trace)]
+                    elif curr_trace.name == std_dev_down_label:
+                        del trace[trace.index(curr_trace)]
+                    else:
+                        pass
+        elif remove == 'STDERR':
+            for curr_trace in trace:
+                try:
+                    curr_trace.error_y = dict()
+                except AttributeError:
+                    pass
+        else:
+            # Unrecognized value to remove
+            print 'Unrecognized trace value ' + remove + ' in exclude list'
+
+
+
+def update_graphs_with_excludes(traces, excludes):
+    if excludes == None:
+        # No exclusions were specified so just ignore this
+        return
+    exclude_list = excludes.replace(':',' ').replace('-',' ').split()
+    while len(exclude_list) != 0:
+        exclude_flag = exclude_list.pop(0)
+        if exclude_flag == 'ALL':
+            exclude_vals = exclude_list.pop(0).split(',')
+            remove_from_all_traces(traces, exclude_vals)
+        elif exclude_flag.isdigit():
+            if int(exclude_flag) - 1 < len(traces):
+                exclude_vals = exclude_list.pop(0).split(',')
+                remove_from_single_trace(traces[int(exclude_flag) - 1], exclude_vals)
+            else:
+                #Option was out of bounds of traces
+                print 'Graph ' + exclude_flag + ' is not in graph set'
+        else:
+            #Unrecognized exclude
+            print 'Unrecognized exclude option... Ingoring ' + exclude_val
+
+
+
+def create_graphs(file_name, excludes):
+    fp = open(file_name, 'r')
+    one_graph = False
+
     line = fp.readline()
     vals = line.split()
+    # Checking to see all datasets are in one graph
+    if vals[len(vals) - 1] == 'ALL':
+        one_graph = True
+
+    # Getting number of datasets and y_vals per dataset
     total_datasets = int(vals[0])
     poi = int(vals[1])
     line = fp.readline()
@@ -121,8 +200,12 @@ def create_graphs(file_name):
                 std_dev_str = fp.readline()
                 std_dev = [float(s) for s in std_dev_str.split() if isfloat(s)]
                 for chart in all_trace[x]:
+                    if chart.type == 'bar':
+                        # If this is a bar chart, we will not add standard deviations
+                        break
+
                     if line_split[len(line_split) - 1] == chart.name:
-                        all_trace[x].append(go.Scatter(name = 'Upper Bound Std. Dev',
+                        all_trace[x].append(go.Scatter(name = std_dev_up_label,
 			                                           y = list( map(add, chart.y, std_dev) ),
                                                        x = chart.x,
                                                        mode = 'lines',
@@ -132,7 +215,7 @@ def create_graphs(file_name):
                                                        fill = 'tonexty'
                                                        )
                                             )
-                        all_trace[x].append(go.Scatter(name = 'Lower Bound Std. Dev',
+                        all_trace[x].append(go.Scatter(name = std_dev_down_label,
                                                        y = list( map(sub, chart.y, std_dev) ),
                                                        x = chart.x,
                                                        mode = 'lines',
@@ -158,12 +241,27 @@ def create_graphs(file_name):
                 print 'Unknown point of interest'
                 continue
 
-    for x in xrange(len(all_layouts)):
+    update_graphs_with_excludes(all_trace, excludes)
+
+    if one_graph:
         data = []
-        for trace in all_trace[x]:
-            data.append(trace)
-        fig = go.Figure(data = data, layout = all_layouts[x])
-        py.plot(fig, filename='plot_' + str(x))
+        for trace_x in all_trace:
+            for curr_trace in trace_x:
+                data.append(curr_trace)
+        # Since we are creating only one graph, we will use only one
+        # layout
+        layout = all_layouts[0]
+        fig = go.Figure(data = data, layout = layout)
+        py.plot(fig, filename='plot_all')
+    else:
+        for x in xrange(len(all_layouts)):
+            data = []
+            for trace in all_trace[x]:
+                data.append(trace)
+            fig = go.Figure(data = data, layout = all_layouts[x])
+            py.plot(fig, filename='plot_' + str(x))
+
+
 
 def main():
 
@@ -171,6 +269,8 @@ def main():
     parser.add_argument('-i', '--input_file', type=str,
                         help='Plot configuration file',
                         required=True)
+    parser.add_argument('-e', '--exclude', type=str,
+                        help='Values to exclude from generated plot')
 
     try:
         args = parser.parse_args()
@@ -179,7 +279,7 @@ def main():
         sys.exit(0)
 
     input_file = args.input_file
-    create_graphs(input_file)
+    create_graphs(input_file, args.exclude)
 
 if __name__ == '__main__':
     main()
