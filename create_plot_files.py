@@ -71,7 +71,7 @@ def parse_test_case_header(fp, queries):
 
 
 
-def write_output_file(output_file_name, threads, data_points, \
+def write_output_file(output_file_name, queries, threads, data_points, \
                       std_devs, std_errs, chart_titles, y_labels):
     fp = open(output_file_name, 'w')
     # Writing out how many data sets there are along with each
@@ -86,21 +86,21 @@ def write_output_file(output_file_name, threads, data_points, \
         y_label_split = y_labels[x].split(',')
         # Writing out chart titles
         fp.write('# ')
-        fp.write(chart_titles[x])
+        fp.write(chart_titles[x].rstrip() + ',' + queries[x] + '\n')
         # Writing out the y labels
         fp.write('# y-title,')
-        fp.write(y_labels[x])
+        fp.write(y_labels[x].rstrip() + ',' + queries[x] + '\n')
         # Writing out y data values
         for y in xrange(len(data_points[x])):
             fp.write(str('%.3f' % data_points[x][y]) + ' ')
         fp.write('\n')
         # Writing out standard deviations
-        fp.write('# STDDEV,' + y_label_split[1])
+        fp.write('# STDDEV,' + queries[x] + '\n')
         for y in xrange(len(std_devs[x])):
             fp.write(str('%.3f' % std_devs[x][y]) + ' ')
         fp.write('\n')
         # Writing out standard errors
-        fp.write('# STDERR,' + y_label_split[1])
+        fp.write('# STDERR,' + queries[x] + '\n')
         for y in xrange(len(std_errs[x])):
             fp.write(str('%.3f' % std_errs[x][y]) + ' ')
         fp.write('\n')
@@ -172,7 +172,7 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, runs):
     # Writing out all output to output file
     output_file_name = base_dir
     output_file_name += '_data.txt'
-    write_output_file(output_file_name, threads, data_points, \
+    write_output_file(output_file_name, queries, threads, data_points, \
                       std_devs, std_errs, chart_titles, y_labels)
 
 
