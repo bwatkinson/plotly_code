@@ -78,28 +78,29 @@ def write_output_file(output_file_name, threads, data_points, \
     # datasets corresponding values
     fp.write(str(len(data_points)) + ' ' + '3\n')
     # Writing out the x values
-    fp.write('# x-title Number of I/O Threads\n')
+    fp.write('# x-title,Number of I/O Threads\n')
     for x in threads:
         fp.write(str(x) + ' ')
     fp.write('\n')
     for x in xrange(len(data_points)):
+        y_label_split = y_labels[x].split(',')
         # Writing out chart titles
         fp.write('# ')
         fp.write(chart_titles[x])
         # Writing out the y labels
-        fp.write('# y-title ')
+        fp.write('# y-title,')
         fp.write(y_labels[x])
         # Writing out y data values
         for y in xrange(len(data_points[x])):
             fp.write(str('%.3f' % data_points[x][y]) + ' ')
         fp.write('\n')
         # Writing out standard deviations
-        fp.write('# STDDEV\n')
+        fp.write('# STDDEV,' + y_label_split[1])
         for y in xrange(len(std_devs[x])):
             fp.write(str('%.3f' % std_devs[x][y]) + ' ')
         fp.write('\n')
         # Writing out standard errors
-        fp.write('# STDERR\n')
+        fp.write('# STDERR,' + y_label_split[1])
         for y in xrange(len(std_errs[x])):
             fp.write(str('%.3f' % std_errs[x][y]) + ' ')
         fp.write('\n')
