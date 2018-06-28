@@ -1,0 +1,106 @@
+Run 2 out of 3
+thread count 32 for random_ratio_8.dat
+Writing random_ratio_8_32_bs_32768.dat to /in21-zfs-dst
+IOIOIOIOIOIOIOIOIOIOI XDD version xdd 7.0.0.rc-ramses3 based on 7.0.0.rc-ramses3 IOIOIOIOIOIOIOIOIOIOIOI
+xdd - I/O Performance Inc., US DoE/DoD Extreme Scale Systems Center <ESSC> at Oak Ridge National Labs <ORNL> - Copyright 1992-2010
+
+XDD DISCLAIMER:
+ *** >>>> WARNING <<<<
+ *** THIS PROGRAM CAN DESTROY DATA
+ *** USE AT YOUR OWN RISK
+ *** IOPERFORMANCE and/or THE AUTHORS ARE NOT LIABLE FOR
+ *** >>>> ANYTHING BAD <<<<
+ **** THAT HAPPENS WHEN YOU RUN THIS PROGRAM
+     ...although we will take credit for anything good that happens
+     but we are not *liable* for that either.
+
+
+Starting time for this run, Wed Jun 20 12:40:29 2018
+
+ID for this run, 'No ID Specified'
+Maximum Process Priority, disabled
+Passes, 1
+Pass Delay in seconds, 0.000000
+Maximum Error Threshold, 0
+Target Offset, 0
+I/O Synchronization, 0
+Total run-time limit in seconds, 0.000000
+Output file name, stdout
+CSV output file name, 
+Error output file name, stderr
+Pass synchronization barriers, enabled
+Number of Targets, 1
+Number of I/O Threads, 33
+
+Computer Name, in21, User Name, brian
+OS release and version, Linux 3.10.0-514.el7.x86_64 #1 SMP Tue Nov 22 16:42:41 UTC 2016
+Machine hardware type, x86_64
+Number of processors on this system, 60
+Page size in bytes, 4096
+Number of physical pages, 99007333
+Megabytes of physical memory, 386747
+Clock Ticks per second, 100
+Seconds before starting, 0
+xdd: xdd_target_existence_check: NOTICE: target number 0 name /in21-zfs-dst/random_ratio_8_32_bs_32768.dat does not exist so it will be created.
+	Target number, 0
+		Fully qualified target pathname, '/in21-zfs-dst/random_ratio_8_32_bs_32768.dat'
+		Target directory, "./"
+		Process ID, 71290
+		Thread ID, 71292
+		Processor, all/any
+		Read/write ratio,  0.00 READ, 100.00 WRITE
+		Network Operation Ordering is,none
+		Storage Operation Ordering is,none
+		Throttle is unrestricted
+		Per-pass time limit in seconds, 0.000000
+		Pass seek randomization, disabled
+		File write synchronization, disabled
+		Blocksize in bytes, 32768
+		Request size, 128, 32768-byte blocks, 4194304, bytes
+		Number of Operations, 5120
+		Total data transfer for this TARGET, 
+			655360, 32768-byte Blocks
+			    21474836480,     Bytes
+			       20971520.000, KBytes
+			          20480.000, MBytes
+			             20.000, GBytes
+			              0.020, TBytes
+		Start offset,   0
+		Pass offset,   0
+		Seek Range,  
+			1048576, 32768-byte Blocks
+			    34359738368,     Bytes
+			       33554432.000, KBytes
+			          32768.000, MBytes
+			             32.000, GBytes
+			              0.031, TBytes
+		Seek pattern, sequential
+		Flushwrite interval, 0
+		I/O memory buffer is a normal memory buffer
+		I/O memory buffer alignment in bytes, 4096
+		Data pattern in buffer,0x00
+		Data buffer verification is disabled.
+		Direct I/O, disabled
+		Preallocation, 0
+		Pretruncation, 0
+		Queue Depth, 32
+		Timestamping, disabled
+		Heartbeat Disabled, 
+		Delete file, disabled
+		End-to-End ACTIVE: this target is the DESTINATION side
+		End-to-End Destination Address 1 of 1 '127.0.0.1' base port 8080 for 32 ports [ports 8080 - 8111]
+
+----------------------All targets should start now-------------------------
+   What               Pass  Target   Queue     Bytes_Xfered         Ops     Elapsed  Bandwidth       IOPS   Latency   Pct_CPU  Op_Type    Xfer_Size
+    UNITS>>      Number  Number  Number            Bytes        #ops     seconds   MBytes/s      Ops/s  millisec   percent     text        bytes
+ COMBINED             1       1      32      21474836480        5120      10.151   2115.531    504.382     0.062   278.592    write      4194304
+Ending time for this run, Wed Jun 20 12:40:42 2018
+ This run terminated normally
+File was written
+               capacity     operations    bandwidth
+pool        alloc   free   read  write   read  write
+----------  -----  -----  -----  -----  -----  -----
+in21-zfs-dst  1.77G  1.45T      2    229  17.5K  7.04M
+  nvme1n1   1.77G  1.45T      2    229  17.5K  7.04M
+----------  -----  -----  -----  -----  -----  -----
+
