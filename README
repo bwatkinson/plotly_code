@@ -4,8 +4,11 @@ python create_plot_files.py --directory ./xdd_data_sets/xdd_with_bs_16384 --inpu
 
 # Example of then generating plot from the output from above command
 python plot_graphs.py -i xdd_with_bs_16384_data.txt 
-python plot_graphs.py -i xdd_with_bs_16384_data.txt -e ALL:STDDEV;1:STDERR;3:STDERR
-phthon plot_graphs.py --input_file xdd_with_bs_16384_data.txt --exclude ALL:STDDEV;1:STDERR;3:STDERR
+python plot_graphs.py -i xdd_with_bs_16384_data.txt -e ALL:STDDEV-1:STDERR-3:STDERR
+python plot_graphs.py --input_file xdd_with_bs_16384_data.txt --exclude ALL:STDDEV-1:STDERR-3:STDERR
+# If you want to just delete a say dataset 2 you could also do
+python plot_graphs.py -i all_Bandwidth_data.txt -e DEL:2
+python plot_gprahs.py -i all_Bandwidth_data.txt -e ALL:STDDEV-DEL:2
 
 # Example of combining multiple graphs and then plotting them
 python combine_plot_files_data.py -p point_of_interest.txt -l data_labels.txt
