@@ -64,7 +64,6 @@ def remove_from_single_trace(trace, exclude_vals):
                     else:
                         pass
         elif remove == 'STDERR':
-            print trace
             for curr_trace in trace:
                 try:
                     curr_trace.error_y = dict()
@@ -80,8 +79,7 @@ def update_graphs_with_excludes(traces, excludes):
     if excludes == None:
         # No exclusions were specified so just ignore this
         return
-
-    exclude_list = excludes.replace(':',' ').replace(';',' ').split()
+    exclude_list = excludes.replace(':',' ').replace('-',' ').split()
     while len(exclude_list) != 0:
         exclude_flag = exclude_list.pop(0)
         if exclude_flag == 'ALL':
