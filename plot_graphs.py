@@ -194,7 +194,7 @@ def create_graphs(file_name, excludes):
                     if line_split[len(line_split) - 1] == chart.name:
                         chart.y = y_val
                         # chart.mode = 'lines+markers+text',
-                        # chart.text = [y_val],
+                        chart.text = [str(y) for y in y_val]
                         # chart.textposition = 'bottom center'
             elif line_split[0].replace('# ','') == 'STDDEV':
                 std_dev_str = fp.readline()
