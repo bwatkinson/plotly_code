@@ -181,7 +181,6 @@ def create_graphs(file_name, excludes):
 		                                    titlefont = title_fonts,
                                             gridwidth = 2,
                                             autorange = False,
-                                            range = [0, y_val[len(y_val) - 1] + 100],
                                             showgrid = True,
                                             showline = False,
                                             type = 'linear',
@@ -243,21 +242,32 @@ def create_graphs(file_name, excludes):
 
     update_graphs_with_excludes(all_trace, excludes)
 
+    max_y = 0
     if one_graph:
         data = []
         for trace_x in all_trace:
             for curr_trace in trace_x:
                 data.append(curr_trace)
+                curr_max_y = max(curr_trace.y)
+                if curr_max_y > max_y:
+                    max_y = curr_max_y
         # Since we are creating only one graph, we will use only one
         # layout
+        # here we need to get find max_y
+        all_layouts[0].yaxis.range = [0,max_y + 50] 
         layout = all_layouts[0]
         fig = go.Figure(data = data, layout = layout)
         py.plot(fig, filename='plot_all')
     else:
         for x in xrange(len(all_layouts)):
+            max_y = 0
             data = []
             for trace in all_trace[x]:
                 data.append(trace)
+                curr_max_y = max(trace.y)
+                if curr_max_y > max_y:
+                    max_y = curr_max_y
+            all_layouts[x].yaxis.range = [0,max_y + 50]        
             fig = go.Figure(data = data, layout = all_layouts[x])
             py.plot(fig, filename='plot_' + str(x))
 
