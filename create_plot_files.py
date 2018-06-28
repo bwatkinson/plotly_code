@@ -170,7 +170,8 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, runs):
             std_errs[x].append(numpy.std(run_datapoints[x])/(runs**0.5))
     
     # Writing out all output to output file
-    output_file_name = base_dir
+    base_dir_list = base_dir.split('/')
+    output_file_name = base_dir_list[len(base_dir_list) - 1]
     output_file_name += '_data.txt'
     write_output_file(output_file_name, queries, threads, data_points, \
                       std_devs, std_errs, chart_titles, y_labels)
