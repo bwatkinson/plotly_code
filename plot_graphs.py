@@ -154,7 +154,8 @@ def create_graphs(file_name, excludes):
                                                        zerolinewidth = 2,
                                                        showticklabels = True,
                                                        tickcolor = 'rgb(0, 0, 0)',
-                                                       ticks = 'outside'
+                                                       ticks = 'outside',
+                                                       tickvals = x_vals
                                                   )
                                          )
                                )
