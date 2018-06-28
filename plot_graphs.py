@@ -94,6 +94,13 @@ def update_graphs_with_excludes(traces, excludes):
             else:
                 #Option was out of bounds of traces
                 print 'Graph ' + exclude_flag + ' is not in graph set'
+        elif exclude_flag == 'DEL':
+            plot_to_remove = int(exclude_list.pop(0))
+            if plot_to_remove - 1 < len(traces):
+                del traces[plot_to_remove]
+            else:
+                # Option was out of bounds of traces
+                print 'DEL exclude can only be done in the proper range'
         else:
             #Unrecognized exclude
             print 'Unrecognized exclude option... Ingoring ' + exclude_val
