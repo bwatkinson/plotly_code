@@ -26,10 +26,15 @@ def isfloat(x):
 
 def create_graphs(file_name):
     fp = open(file_name, 'r')
+    one_graph = False
 
-    # Getting vals
     line = fp.readline()
     vals = line.split()
+    # Checking to see all datasets are in one graph
+    if vals[len(vals) - 1] == 'ALL':
+        one_graph = True
+
+    # Getting number of datasets and y_vals per dataset
     total_datasets = int(vals[0])
     poi = int(vals[1])
     line = fp.readline()
@@ -117,12 +122,23 @@ def create_graphs(file_name):
                 print 'Unknown point of interest'
                 continue
 
-    for x in xrange(len(all_layouts)):
+    if one_graph:
         data = []
-        for trace in all_trace[x]:
-            data.append(trace)
-        fig = go.Figure(data = data, layout = all_layouts[x])
-        py.plot(fig, filename='plot_' + str(x))
+        for trace_x in all_trace:
+            for curr_trace in trace_x:
+                data.append(curr_trace)
+        # Since we are creating only one graph, we will use only one
+        # layout
+        layout = all_layouts[0]
+        fig = go.Figure(data = data, layout = layout)
+        py.plot(fig, filename='plot_all')
+    else:
+        for x in xrange(len(all_layouts)):
+            data = []
+            for trace in all_trace[x]:
+                data.append(trace)
+            fig = go.Figure(data = data, layout = all_layouts[x])
+            py.plot(fig, filename='plot_' + str(x))
 
 def main():
 
