@@ -1,4 +1,6 @@
-import plotly.plotly as py
+from plotly import __version__
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+#import plotly.plotly as py
 import plotly.graph_objs as go
 import argparse
 import sys
@@ -7,11 +9,11 @@ from operator import add, sub
 #############################################################
 # Global Plot Visual Values
 chart_title_font = dict(family = 'Times New Roman',
-			       size = 24,
+			       size = 30,
 			       color = '#7f7f7f'
 		      )
 title_fonts = dict(family = 'Times New Roman',
-			       size = 24,
+			       size = 20,
 			       color = '#7f7f7f'
 		      )
 
@@ -92,6 +94,13 @@ def update_graphs_with_excludes(traces, excludes):
             else:
                 #Option was out of bounds of traces
                 print 'Graph ' + exclude_flag + ' is not in graph set'
+        elif exclude_flag == 'DEL':
+            plot_to_remove = int(exclude_list.pop(0))
+            if plot_to_remove - 1 < len(traces):
+                del traces[plot_to_remove]
+            else:
+                # Option was out of bounds of traces
+                print 'DEL exclude can only be done in the proper range'
         else:
             #Unrecognized exclude
             print 'Unrecognized exclude option... Ingoring ' + exclude_val
@@ -130,42 +139,45 @@ def create_graphs(file_name, excludes):
                                                        dash = 'solid',
                                                        shape = 'spline'
                                                   ),
-                                           marker = dict(color = ('rgb(29, 130, 39)'),
-                                                         opacity = 1,
+                                           marker = dict(opacity = 1,
                                                          size = 7,
                                                          line = dict(width = 1.5)
                                                     ),
                                            mode = 'lines+markers+text',
-                                           text = ['pt1', 'pt2', 'pt3', 'pt4', 'pt5', 'pt6', 'pt7'],
                                            textposition = 'bottom center'
                                           )
                                )
-            all_layouts.append(go.Layout(title = line_split[1],
-		                                 titlefont = chart_title_font, 
-                                          xaxis = dict(title = x_title,
-		                                               titlefont = title_fonts,
-                                                       autorange = False,
-                                                       gridwidth = 2,
-                                                       range = [0, x_vals[len(x_vals) - 1] + 10],
-                                                       showgrid = True,
-                                                       showline = False,
-                                                       type = 'linear',
-                                                       zeroline = True,
-                                                       zerolinewidth = 2,
-                                                       showticklabels = True,
-                                                       tickcolor = 'rgb(0, 0, 0)',
-                                                       ticks = 'outside',
-                                                       tickvals = x_vals
-                                                  )
+            all_layouts.append(go.Layout(title = '<b>' + line_split[1] + '</b>',
+		                                 titlefont =  chart_title_font, 
+                                         xaxis = dict(title = x_title,
+		                                              titlefont = title_fonts,
+                                                      autorange = False,
+                                                      gridwidth = 2,
+                                                      range = [0, x_vals[len(x_vals) - 1] + 10],
+                                                      showgrid = True,
+                                                      showline = False,
+                                                      type = 'linear',
+                                                      zeroline = True,
+                                                      zerolinewidth = 2,
+                                                      showticklabels = True,
+                                                      tickcolor = 'rgb(0, 0, 0)',
+                                                      ticks = 'outside',
+                                                      tickvals = x_vals
+                                                 )
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
+<<<<<<< HEAD
             all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1],
                                        text = ['bar1', 'bar2', 'bar3', 'bar4', 'bar5', 'bar6', 'bar7'],
                                        textposition = 'auto'
                                       )
                                )
             all_layouts.append(go.Layout(title=line_split[1],
+=======
+            all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1]))
+            all_layouts.append(go.Layout(title='<b>' + line_split[1] + '</b>',
+>>>>>>> 52548e87ebda17db658d6ac59899117e5689ccfc
 		                                 titlefont = chart_title_font,
                                          xaxis = dict(title = x_title,
 		                                              titlefont = title_fonts,
@@ -203,9 +215,7 @@ def create_graphs(file_name, excludes):
                 for chart in all_trace[x]:
                     if line_split[len(line_split) - 1] == chart.name:
                         chart.y = y_val
-                        # chart.mode = 'lines+markers+text',
                         chart.text = [str(y) for y in y_val]
-                        # chart.textposition = 'bottom center'
             elif line_split[0].replace('# ','') == 'STDDEV':
                 std_dev_str = fp.readline()
                 std_dev = [float(s) for s in std_dev_str.split() if isfloat(s)]
@@ -268,7 +278,7 @@ def create_graphs(file_name, excludes):
         all_layouts[0].yaxis.range = [0,max_y + 50] 
         layout = all_layouts[0]
         fig = go.Figure(data = data, layout = layout)
-        py.plot(fig, filename='plot_all')
+        plot(fig, filename='plot_all')
     else:
         for x in xrange(len(all_layouts)):
             max_y = 0
@@ -280,7 +290,7 @@ def create_graphs(file_name, excludes):
                     max_y = curr_max_y
             all_layouts[x].yaxis.range = [0,max_y + 50]        
             fig = go.Figure(data = data, layout = all_layouts[x])
-            py.plot(fig, filename='plot_' + str(x))
+            plot(fig, filename='plot_' + str(x))
 
 
 

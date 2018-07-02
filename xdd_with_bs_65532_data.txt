@@ -1,0 +1,17 @@
+2 3
+# x-title,Number of I/O Threads
+1 2 4 8 16 32 64 
+# bar,Write Throughput for Native ZFS Compression using 64KB Block Sizes,Bandwidth
+# y-title,Throughput (MB/s),Bandwidth
+466.000 806.288 1213.421 1544.765 1913.069 2157.098 2239.282 
+# STDDEV,Bandwidth
+6.077 17.898 17.672 142.975 202.903 7.308 18.374 
+# STDERR,Bandwidth
+3.509 10.333 10.203 82.547 117.146 4.219 10.608 
+# line,IOPS with 64KB Block Size Writes,IOPS
+# y-title,I/O Operations per Second,IOPS
+55.573 96.155 144.707 184.222 228.145 257.246 267.048 
+# STDDEV,IOPS
+0.725 2.135 2.107 17.051 24.197 0.872 2.191 
+# STDERR,IOPS
+0.418 1.232 1.217 9.844 13.970 0.503 1.265 
