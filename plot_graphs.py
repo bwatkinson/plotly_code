@@ -160,11 +160,21 @@ def create_graphs(file_name, excludes):
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
-            all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1]))
+            all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1],
+                                       text = ['bar1', 'bar2', 'bar3', 'bar4', 'bar5', 'bar6', 'bar7'],
+                                       textposition = 'auto'
+                                      )
+                               )
             all_layouts.append(go.Layout(title=line_split[1],
 		                                 titlefont = chart_title_font,
                                          xaxis = dict(title = x_title,
-		                                              titlefont = title_fonts 
+		                                              titlefont = title_fonts,
+                                                      zeroline = True,
+                                                      zerolinewidth = 2,
+                                                      showticklabels = True,
+                                                      tickcolor = 'rgb(0, 0, 0)',
+                                                      ticks = 'outside',
+                                                      tickvals = x_vals
                                                  )
                                          )
                                )
