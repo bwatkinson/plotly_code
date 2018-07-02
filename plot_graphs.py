@@ -167,17 +167,13 @@ def create_graphs(file_name, excludes):
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
-<<<<<<< HEAD
             all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1],
                                        text = ['bar1', 'bar2', 'bar3', 'bar4', 'bar5', 'bar6', 'bar7'],
                                        textposition = 'auto'
                                       )
                                )
-            all_layouts.append(go.Layout(title=line_split[1],
-=======
             all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1]))
             all_layouts.append(go.Layout(title='<b>' + line_split[1] + '</b>',
->>>>>>> 52548e87ebda17db658d6ac59899117e5689ccfc
 		                                 titlefont = chart_title_font,
                                          xaxis = dict(title = x_title,
 		                                              titlefont = title_fonts,
