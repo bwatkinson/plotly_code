@@ -163,7 +163,7 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, runs):
         
         for x in xrange(len(queries)):  
             # Getting mean values of data
-            data_points[x].append(numpy.mean(run_datapoints[x]))
+            data_points[x].append(numpy.median(run_datapoints[x]))
             # Getting Standard Deviation for Data Points
             std_devs[x].append(numpy.std(run_datapoints[x]))
             # Getting Standard Error for Data Points
@@ -190,7 +190,7 @@ def create_bulk_plot_files(plot_dir, xdd_dir):
 
     # Generating all xdd data directory paths
     for plot_file_name in plot_file_names:
-        xdd_data_dirs.append(xdd_dir + '/' + plot_file_name.strip('.plot')
+        xdd_data_dirs.append(xdd_dir + '/' + plot_file_name.strip('.plot'))
 
     # Just using the first file to get total runs
     total_runs = get_total_num_runs_and_threads(xdd_data_dirs[0], threads)
