@@ -200,7 +200,7 @@ def create_graphs(file_name, excludes):
                 for chart in all_trace[x]:
                     if line_split[len(line_split) - 1] == chart.name:
                         chart.y = y_val
-                        chart.text = [str(y) for y in y_val]
+            
             elif line_split[0].replace('# ','') == 'STDDEV':
                 std_dev_str = fp.readline()
                 std_dev = [float(s) for s in std_dev_str.split() if isfloat(s)]
@@ -248,6 +248,32 @@ def create_graphs(file_name, excludes):
 
     update_graphs_with_excludes(all_trace, excludes)
 
+    # Getting all y values from data traces, so we can just label min and
+    # max below
+    all_y_vals = []
+    y_vals_len = 0
+    for curr_trace in all_trace:
+        all_y_vals.append(curr_trace[0].y)
+        y_vals_len = len(curr_trace[0].y)
+
+    # Setting all trace text labels to empty to begin with
+    for curr_trace in all_trace:
+        curr_trace[0].text = list(str(' ') * y_vals_len)
+
+    # We are only going to label the min and max of the data sets
+    for x in xrange(y_vals_len):
+        curr_y_vals = []
+        for z in xrange(len(all_y_vals)):
+            curr_y_vals.append(all_y_vals[z][x])
+        y_max = max(curr_y_vals)
+        y_min = min(curr_y_vals)
+        for curr_trace in all_trace:
+            if y_max in curr_trace[0].y:
+                curr_trace[0].text[curr_trace[0].y.index(y_max)] = str(y_max)
+            if y_min in curr_trace[0].y:
+                curr_trace[0].text[curr_trace[0].y.index(y_min)] = str(y_min)
+    
+    # Setting data range for y values
     max_y = 0
     if one_graph:
         data = []
