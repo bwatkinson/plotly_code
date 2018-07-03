@@ -1,6 +1,5 @@
 #Input data plot text files
 xdd_with_bs_16384_data.txt
 xdd_with_bs_65532_data.txt
-xdd_with_bs_131072_data.txt
 #Value we want to create combine plot from input files
 Bandwidth

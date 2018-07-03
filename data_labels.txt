@@ -3,4 +3,3 @@ line,Write Throughput for Native ZFS Compression for Varying Block Sizes
 # Now just listing new labels for generated plot file
 Bandwidth for 16KB
 Bandwidth for 64KB
-Bandwidth for 128KB

@@ -1,6 +1,6 @@
-from plotly import __version__
-from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
-#import plotly.plotly as py
+# from plotly import __version__
+# from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+import plotly.plotly as py
 import plotly.graph_objs as go
 import argparse
 import sys
@@ -103,7 +103,7 @@ def update_graphs_with_excludes(traces, excludes):
                 print 'DEL exclude can only be done in the proper range'
         else:
             #Unrecognized exclude
-            print 'Unrecognized exclude option... Ingoring ' + exclude_val
+            print 'Unrecognized exclude option... Ignoring ' + exclude_val
 
 
 
@@ -167,11 +167,21 @@ def create_graphs(file_name, excludes):
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
+            all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1],
+                                       textposition = 'auto'
+                                      )
+                               )
             all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1]))
             all_layouts.append(go.Layout(title='<b>' + line_split[1] + '</b>',
 		                                 titlefont = chart_title_font,
                                          xaxis = dict(title = x_title,
-		                                              titlefont = title_fonts 
+		                                              titlefont = title_fonts,
+                                                      zeroline = True,
+                                                      zerolinewidth = 2,
+                                                      showticklabels = True,
+                                                      tickcolor = 'rgb(0, 0, 0)',
+                                                      ticks = 'outside',
+                                                      tickvals = x_vals
                                                  )
                                          )
                                )
@@ -289,7 +299,8 @@ def create_graphs(file_name, excludes):
         all_layouts[0].yaxis.range = [0,max_y + 50] 
         layout = all_layouts[0]
         fig = go.Figure(data = data, layout = layout)
-        plot(fig, filename='plot_all')
+        # plot(fig, filename='plot_all')
+        py.plot(fig, filename='plot_all')
     else:
         for x in xrange(len(all_layouts)):
             max_y = 0
@@ -301,7 +312,8 @@ def create_graphs(file_name, excludes):
                     max_y = curr_max_y
             all_layouts[x].yaxis.range = [0,max_y + 50]        
             fig = go.Figure(data = data, layout = all_layouts[x])
-            plot(fig, filename='plot_' + str(x))
+            # plot(fig, filename='plot_' + str(x))
+            py.plot(fig, filename='plot_' + str(x))
 
 
 
