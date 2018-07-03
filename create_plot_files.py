@@ -177,6 +177,37 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, runs):
                       std_devs, std_errs, chart_titles, y_labels)
 
 
+def create_bulk_plot_files(plot_dir, xdd_dir):    
+    total_runs = 0
+    threads = []
+    chart_titles = []
+    y_labelss = []
+    queries = []
+    xdd_data_dirs = []
+
+    # Grabbing all plot files from plot directory
+    plot_file_names = glob.glob(plot_dir + '/' + '*.plot')
+
+    # Generating all xdd data directory paths
+    for plot_file_name in plot_file_names:
+        xdd_data_dirs.append(xdd_dir + '/' + plot_file_name.strip('.plot')
+
+    # Just using the first file to get total runs
+    total_runs = get_total_num_runs_and_threads(xdd_data_dirs[0], threads)
+    
+    # Now just generating all plot files
+    for plot_file,  xdd_curr_dir in zip(plot_file_names, xdd_data_dirs):
+        parse_input_file(plot_file, queries, chart_titles, y_labels)
+        getting_data(xdd_curr_dir, 
+                     queries, 
+                     chart_titles, 
+                     y_labels, 
+                     threads, 
+                     total_runs)
+        queries = []
+        chart_titles = []
+        y_labels = []
+                   
                     
 def main():
     threads = []
@@ -186,24 +217,44 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--directory', type=str,
-                         help='The base directory to pull input files from',
-                         required=True)
+                         help='The base directory to pull input files from, either this and -i are required unless -b is used')
     parser.add_argument('-i', '--input_file', type=str,
-                         help='Plot configuration input file',
-                         required=True)
-    try:
-        args = parser.parse_args()
-    except:
-        parser.print_help()
-        sys.exit(0)
-
-    dir_path = args.directory.rstrip('/')
-
-    total_runs = get_total_num_runs_and_threads(dir_path, threads)
+                         help='Plot configuration input file, erither this and -d are required unless -b is used')
+    parser.add_argument('-b', '--bulk', type=str,
+                         help='Do bulk plot operation, either this or -d and -i are required (-b plot_file_dir,xdd_data_dir)')
     
-    parse_input_file(args.input_file, queries, chart_titles, y_labels)
+    # Getting Command Line Arguements
+    args = parser.parse_args()
+    
+    # Checking to make sure requirements are meet
+    if args.directory is None and args.input_file is None and args.bulk is None:
+        # Error Either -d and -i must be set or -b must be set
+        parser.print_help()
+        sys.exit(0)    
+    elif args.bulk is None:
+        if args.directory is None or args.input_file is None:
+            # If not using bulk then then -d and -i must bet set
+            parser.print_help()
+            sys.exit(0)
+    
+    if args.bulk is not None:
+        bulk_list = args.bulk.split(',')
+        plot_dir = bulk_list[0].rstrip('/')
+        xdd_dir = bulk_list[1].rstip('/')
+        create_bulk_plot_files(plot_dir, xdd_dir)
+    else:
+        dir_path = args.directory.rstrip('/')
 
-    getting_data(dir_path, queries, chart_titles, y_labels, threads, total_runs)
+        total_runs = get_total_num_runs_and_threads(dir_path, threads)
+    
+        parse_input_file(args.input_file, queries, chart_titles, y_labels)
+
+        getting_data(dir_path, 
+                     queries, 
+                     chart_titles, 
+                     y_labels, 
+                     threads, 
+                     total_runs)
 
 if __name__ == "__main__":
     main()
