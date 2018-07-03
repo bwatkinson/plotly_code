@@ -144,7 +144,7 @@ def create_graphs(file_name, excludes):
                                                          line = dict(width = 1.5)
                                                     ),
                                            mode = 'lines+markers+text',
-                                           textposition = 'bottom center'
+                                           textposition = 'top right'
                                           )
                                )
             all_layouts.append(go.Layout(title = '<b>' + line_split[1] + '</b>',
