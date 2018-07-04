@@ -9,18 +9,38 @@ acceptable_queries = ['Pass', 'Target', 'Queue', 'Bytes_Xfered', 'Ops'
                       'Elapsed', 'Bandwidth', 'IOPS', 'Latency', 'Pct_CPU',
                       'Xfer_Size']
 
+def get_total_num_passes(basedir):
+    num_passes = 0
+    # Just grabbing the first file to find total number of passes
+    file_names = glob.glob(basedir + '/' + '*.txt')
+    with open(file_names[0],'r') as fp:
+        xdd_input = fp.readlines()
+    # Now finding out the number of passes. The issue is if xdd
+    # was not run with verbose, then there is only 1 combined
+    # pass output. If not, there are multiple passes to account
+    # for.
+    for line in xdd_input:
+        if 'TARGET_PASS' in line:
+            num_passes += 1
+    # If there is only 1 combined pass, then we just set to one
+    if num_passes == 0:
+        num_passes = 1
+    return num_passes
 
-# Getting the total number of runs in input files and threads run
-def get_total_num_runs_and_threads(base_dir, threads):
+
+def is_passes_xdd_data(basedir):
+    # Just grabbing the first file to figure out if it is a pass or run file
+    file_names = glob.glob(basedir + '/' + '*.txt')
+    if 'passes' in file_names[0]:
+        return True
+    else:
+        return False
+
+
+# Getting the threads used for each test
+def get_threads(threads, base_dir):
     all_threads = []
-    # Just grab the first file as all files should contain
-    # the same number of total runs
     file_names = glob.glob(base_dir + '/' + '*.txt')
-    with open(file_names[0]) as fp:
-        line = fp.readline()
-        run_and_runs = [int(s) for s in line.split() if s.isdigit()]
-        # Total Number of Runs
-        total_runs = run_and_runs[1]
     for name in file_names:
         m = re.search('threads_[0-9]+', name)
         if m:
@@ -30,6 +50,19 @@ def get_total_num_runs_and_threads(base_dir, threads):
     reduced_threads = list(set(all_threads))
     for val in reduced_threads:
         bisect.insort(threads, val)
+             
+
+# Getting the total number of runs in input files and threads run
+def get_total_num_runs(base_dir):
+    all_threads = []
+    # Just grab the first file as all files should contain
+    # the same number of total runs
+    file_names = glob.glob(base_dir + '/' + '*.txt')
+    with open(file_names[0]) as fp:
+        line = fp.readline()
+        run_and_runs = [int(s) for s in line.split() if s.isdigit()]
+        # Total Number of Runs
+        total_runs = run_and_runs[1]
     return total_runs
 
 
@@ -61,6 +94,7 @@ def parse_input_file(input_file, queries, chart_titles, y_labels):
             print val + ' is not a valid query'
             print 'Exiting program...' 
             exit(1)
+
 
 def parse_test_case_header(fp, queries):
     #looking for DD command output, so will skip everything else
@@ -122,12 +156,20 @@ def get_offsets(base_dir, offsets, queries):
     
 
 
-def getting_data(base_dir, queries, chart_titles, y_labels, threads, runs):
+def getting_data(base_dir, queries, chart_titles, y_labels, threads):
     offsets = []
     data_points = []
     std_devs = []
     std_errs = []
     run_datapoints = []
+    num_passes = 0
+
+    # If we are using XDD pass data, we need to find total number
+    # of passes
+    if is_passes_xdd_data(base_dir):
+        num_passes = get_total_num_passes(base_dir)
+    else:
+        runs = get_total_num_runs(base_dir)
 
     # Getting offsets of points of interest
     get_offsets(base_dir, offsets, queries)
@@ -138,28 +180,45 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, runs):
     std_errs = [[] for l in range(len(queries))]
 
     for t in threads:
-        # For each thread we will get the mean, standard
-        # deviations, and standard error for IOPS and 
-        # throughputs over the number of runs
+        # For each thread we will get the median, standard
+        # deviations, and standard error for all queries
         input_file = base_dir + '/'
         path_split = base_dir.split('/')
         input_file += path_split[-1]
-        input_file += '_run_'
+        if is_passes_xdd_data(base_dir):
+            input_file += '_passes'
+        else:
+            input_file += '_run_'
         #initializing current runs data sets
         run_datapoints = [[] for l in range(len(queries))]
-        for r in range(1,runs+1):
-             # Getting current input based on run #
-             current_input = input_file
-             current_input += str(r) + '_threads_' + str(t) + '.txt'
-             input_fp = open(current_input, 'r')
-             # Parsing out XDD normal header info
-             parse_test_case_header(input_fp, queries)
-             line = input_fp.readline()
-             line_list = line.split()
-             # Getting data points of interest for this run
-             for x in xrange(len(queries)):
-                 run_datapoints[x].append(float(line_list[offsets[x]]))
-             input_fp.close()
+        if is_passes_xdd_data(base_dir):
+            current_input = input_file
+            current_input += '_threads_' + str(t) + '.txt'
+            input_fp = open(current_input, 'r')
+            # Parsing out XDD normal header info
+            parse_test_case_header(input_fp, queries)
+            # Getting all datapoints
+            for p in xrange(num_passes):
+                line = input_fp.readline()
+                line_list = line.split()
+                # Getting data points of interest for this run
+                for x in xrange(len(queries)):
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
+            input_fp.close()
+        else:
+            for r in range(1,runs+1):
+                 # Getting current input based on run #
+                current_input = input_file
+                current_input += str(r) + '_threads_' + str(t) + '.txt'
+                input_fp = open(current_input, 'r')
+                # Parsing out XDD normal header info
+                parse_test_case_header(input_fp, queries)
+                line = input_fp.readline()
+                line_list = line.split()
+                # Getting data points of interest for this run
+                for x in xrange(len(queries)):
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
+                input_fp.close()
         
         for x in xrange(len(queries)):  
             # Getting mean values of data
@@ -167,7 +226,10 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, runs):
             # Getting Standard Deviation for Data Points
             std_devs[x].append(numpy.std(run_datapoints[x]))
             # Getting Standard Error for Data Points
-            std_errs[x].append(numpy.std(run_datapoints[x])/(runs**0.5))
+            if is_passes_xdd_data(base_dir):
+                std_errs[x].append(numpy.std(run_datapoints[x])/(num_passes**0.5))
+            else:
+                std_errs[x].append(numpy.std(run_datapoints[x])/(runs**0.5))
     
     # Writing out all output to output file
     base_dir_list = base_dir.split('/')
@@ -184,6 +246,7 @@ def create_bulk_plot_files(plot_dir, xdd_dir):
     y_labelss = []
     queries = []
     xdd_data_dirs = []
+    total_runs = -1
 
     # Grabbing all plot files from plot directory
     plot_file_names = glob.glob(plot_dir + '/' + '*.plot')
@@ -192,8 +255,8 @@ def create_bulk_plot_files(plot_dir, xdd_dir):
     for plot_file_name in plot_file_names:
         xdd_data_dirs.append(xdd_dir + '/' + plot_file_name.strip('.plot'))
 
-    # Just using the first file to get total runs
-    total_runs = get_total_num_runs_and_threads(xdd_data_dirs[0], threads)
+    # Getting the all the threads used
+    get_threads(threads, xdd_dir)
     
     # Now just generating all plot files
     for plot_file,  xdd_curr_dir in zip(plot_file_names, xdd_data_dirs):
@@ -202,18 +265,20 @@ def create_bulk_plot_files(plot_dir, xdd_dir):
                      queries, 
                      chart_titles, 
                      y_labels, 
-                     threads, 
-                     total_runs)
+                     threads)
         queries = []
         chart_titles = []
         y_labels = []
                    
-                    
+
+
+                   
 def main():
     threads = []
     queries = []
     chart_titles = []
     y_labels = []
+    total_runs = -1
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--directory', type=str,
@@ -244,17 +309,17 @@ def main():
         create_bulk_plot_files(plot_dir, xdd_dir)
     else:
         dir_path = args.directory.rstrip('/')
-
-        total_runs = get_total_num_runs_and_threads(dir_path, threads)
     
-        parse_input_file(args.input_file, queries, chart_titles, y_labels)
+        
+    get_threads(threads, dir_path)
+    
+    parse_input_file(args.input_file, queries, chart_titles, y_labels)
 
-        getting_data(dir_path, 
-                     queries, 
-                     chart_titles, 
-                     y_labels, 
-                     threads, 
-                     total_runs)
+    getting_data(dir_path, 
+                 queries, 
+                 chart_titles, 
+                 y_labels, 
+                 threads) 
 
 if __name__ == "__main__":
     main()
