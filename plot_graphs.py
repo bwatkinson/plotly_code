@@ -278,10 +278,11 @@ def create_graphs(file_name, excludes):
         y_max = max(curr_y_vals)
         y_min = min(curr_y_vals)
         for curr_trace in all_trace:
+            curr_trace[0].opacity
             if y_max in curr_trace[0].y:
-                curr_trace[0].text[curr_trace[0].y.index(y_max)] = str(y_max)
+                curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
             if y_min in curr_trace[0].y:
-                curr_trace[0].text[curr_trace[0].y.index(y_min)] = str(y_min)
+                curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
     
     # Setting data range for y values
     max_y = 0
@@ -311,6 +312,7 @@ def create_graphs(file_name, excludes):
                 if curr_max_y > max_y:
                     max_y = curr_max_y
             all_layouts[x].yaxis.range = [0,max_y + 50]        
+            #data = list(reversed(data))
             fig = go.Figure(data = data, layout = all_layouts[x])
             # plot(fig, filename='plot_' + str(x))
             py.plot(fig, filename='plot_' + str(x))
