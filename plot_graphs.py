@@ -4,6 +4,7 @@ import plotly.plotly as py
 import plotly.graph_objs as go
 import argparse
 import sys
+import bisect
 from operator import add, sub
 
 #############################################################
@@ -76,11 +77,21 @@ def remove_from_single_trace(trace, exclude_vals):
             print 'Unrecognized trace value ' + remove + ' in exclude list'
 
 
+def check_to_delete(traces, delete_list, list_of_traces):
+    for plot_to_remove in list_of_traces:
+        if int(plot_to_remove) - 1 < len(traces):
+            bisect.insort(delete_list, int(plot_to_remove) - 1)
+        else:
+            # Option was out of bounds of traces
+            print 'DEL exclude can only be done in the proper range'
+
 
 def update_graphs_with_excludes(traces, excludes):
     if excludes == None:
         # No exclusions were specified so just ignore this
         return
+    graphs_del = []
+
     exclude_list = excludes.replace(':',' ').replace('-',' ').split()
     while len(exclude_list) != 0:
         exclude_flag = exclude_list.pop(0)
@@ -95,16 +106,18 @@ def update_graphs_with_excludes(traces, excludes):
                 #Option was out of bounds of traces
                 print 'Graph ' + exclude_flag + ' is not in graph set'
         elif exclude_flag == 'DEL':
-            plot_to_remove = int(exclude_list.pop(0))
-            if plot_to_remove - 1 < len(traces):
-                del traces[plot_to_remove]
-            else:
-                # Option was out of bounds of traces
-                print 'DEL exclude can only be done in the proper range'
+            plots_to_remove = exclude_list.pop(0).split(',')
+            check_to_delete(traces, graphs_del, plots_to_remove)
         else:
             #Unrecognized exclude
             print 'Unrecognized exclude option... Ignoring ' + exclude_val
-
+    
+    # Now we are done parsing other excludes, we can delete 
+    # the traces that were specified
+    if len(graphs_del) != 0:
+        graphs_del = list(reversed(graphs_del))
+        for graph_num in graphs_del:
+            del traces[graph_num]
 
 
 def create_graphs(file_name, excludes):
@@ -299,9 +312,12 @@ def create_graphs(file_name, excludes):
         # here we need to get find max_y
         all_layouts[0].yaxis.range = [0,max_y + 50] 
         layout = all_layouts[0]
-        fig = go.Figure(data = data, layout = layout)
-        # plot(fig, filename='plot_all')
-        py.plot(fig, filename='plot_all')
+        if len(data) != 0:
+            fig = go.Figure(data = data, layout = layout)
+            # plot(fig, filename='plot_all')
+            py.plot(fig, filename='plot_all')
+        else:
+            print 'All plots were removed, nothing to plot'
     else:
         for x in xrange(len(all_layouts)):
             max_y = 0
@@ -312,11 +328,12 @@ def create_graphs(file_name, excludes):
                 if curr_max_y > max_y:
                     max_y = curr_max_y
             all_layouts[x].yaxis.range = [0,max_y + 50]        
-            #data = list(reversed(data))
-            fig = go.Figure(data = data, layout = all_layouts[x])
-            # plot(fig, filename='plot_' + str(x))
-            py.plot(fig, filename='plot_' + str(x))
-
+            if len(data) != 0:
+                fig = go.Figure(data = data, layout = all_layouts[x])
+                # plot(fig, filename='plot_' + str(x))
+                py.plot(fig, filename='plot_' + str(x))
+            else:
+                print 'Current plot was removed'
 
 
 def main():
