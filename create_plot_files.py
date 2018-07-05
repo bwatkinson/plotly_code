@@ -30,10 +30,16 @@ def get_total_num_passes(basedir):
 
 def is_passes_xdd_data(basedir):
     # Just grabbing the first file to figure out if it is a pass or run file
+    first_file_name = ''
     file_names = glob.glob(basedir + '/' + '*.txt')
-    if 'passes' in file_names[0]:
+    for file_name in file_names:
+        first_file_name = file_name
+        break
+    # Checking to see if file name as passes
+    if 'passes' in first_file_name:
         return True
     else:
+        # Assumed here that the file name contains runs
         return False
 
 
@@ -178,7 +184,7 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads):
     data_points = [[] for l in range(len(queries))]
     std_devs = [[] for l in range(len(queries))]
     std_errs = [[] for l in range(len(queries))]
-
+    
     for t in threads:
         # For each thread we will get the median, standard
         # deviations, and standard error for all queries
@@ -203,7 +209,16 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads):
                 line_list = line.split()
                 # Getting data points of interest for this run
                 for x in xrange(len(queries)):
-                    run_datapoints[x].append(float(line_list[offsets[x]]))
+                    # Hacky work around to fix extra tab inserted
+                    # in XDD output for second PASS
+                    if len(line_list) > 13:
+                        if queries[x] == 'Elapsed':
+                            val = line_list[offset[x] - 1] + line_list[offset[x]]
+                            run_datapoints[x].append(val)
+                        else:
+                            run_datapoints[x].append(float(line_list[offsets[x] + 1]))
+                    else:
+                        run_datapoints[x].append(float(line_list[offsets[x]]))
             input_fp.close()
         else:
             for r in range(1,runs+1):
@@ -243,7 +258,7 @@ def create_bulk_plot_files(plot_dir, xdd_dir):
     total_runs = 0
     threads = []
     chart_titles = []
-    y_labelss = []
+    y_labels = []
     queries = []
     xdd_data_dirs = []
     total_runs = -1
@@ -253,11 +268,13 @@ def create_bulk_plot_files(plot_dir, xdd_dir):
 
     # Generating all xdd data directory paths
     for plot_file_name in plot_file_names:
-        xdd_data_dirs.append(xdd_dir + '/' + plot_file_name.strip('.plot'))
+        base_dir = plot_file_name.split('/')
+        base_dir_str = base_dir[len(base_dir) - 1]
+        xdd_data_dirs.append(xdd_dir + '/' + base_dir_str.strip('.plot'))
 
-    # Getting the all the threads used
-    get_threads(threads, xdd_dir)
-    
+    # Getting the all the threads used, should be same for all.
+    # Because of this, just using first directory
+    get_threads(threads, xdd_data_dirs[0])
     # Now just generating all plot files
     for plot_file,  xdd_curr_dir in zip(plot_file_names, xdd_data_dirs):
         parse_input_file(plot_file, queries, chart_titles, y_labels)
@@ -305,21 +322,17 @@ def main():
     if args.bulk is not None:
         bulk_list = args.bulk.split(',')
         plot_dir = bulk_list[0].rstrip('/')
-        xdd_dir = bulk_list[1].rstip('/')
+        xdd_dir = bulk_list[1].rstrip('/')
         create_bulk_plot_files(plot_dir, xdd_dir)
     else:
         dir_path = args.directory.rstrip('/')
-    
-        
-    get_threads(threads, dir_path)
-    
-    parse_input_file(args.input_file, queries, chart_titles, y_labels)
-
-    getting_data(dir_path, 
-                 queries, 
-                 chart_titles, 
-                 y_labels, 
-                 threads) 
+        get_threads(threads, dir_path)
+        parse_input_file(args.input_file, queries, chart_titles, y_labels)
+        getting_data(dir_path, 
+                     queries, 
+                     chart_titles, 
+                     y_labels, 
+                     threads) 
 
 if __name__ == "__main__":
     main()
