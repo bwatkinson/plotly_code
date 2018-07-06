@@ -209,16 +209,25 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads):
                 line_list = line.split()
                 # Getting data points of interest for this run
                 for x in xrange(len(queries)):
+                    new_line_list = []
                     # Hacky work around to fix extra tab inserted
-                    # in XDD output for second PASS
+                    # in XDD output for certain PASS'es. Our only
+                    # hope of fixing this error is if the tab appears
+                    # In a floating point number...
                     if len(line_list) > 13:
-                        if queries[x] == 'Elapsed':
-                            val = line_list[offset[x] - 1] + line_list[offset[x]]
-                            run_datapoints[x].append(val)
-                        else:
-                            run_datapoints[x].append(float(line_list[offsets[x] + 1]))
-                    else:
-                        run_datapoints[x].append(float(line_list[offsets[x]]))
+                        new_line_list = []
+                        while len(line_list) != 0:
+                            curr_val = line_list.pop(0)
+                            float_missing_dec = re.search('^\d+\.\D?$', curr_val)
+                            if float_missing_dec:
+                                # Found decimal point value missing
+                                # values after decimal point, so just
+                                # need to combine the values
+                                new_line_list.append(curr_val + line_list.pop(0))
+                            else:
+                                new_line_list.append(curr_val)
+                        line_list = new_line_list
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
             input_fp.close()
         else:
             for r in range(1,runs+1):
@@ -235,6 +244,9 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads):
                     run_datapoints[x].append(float(line_list[offsets[x]]))
                 input_fp.close()
         
+        if t == 1:
+            print run_datapoints[x]
+            exit(1)
         for x in xrange(len(queries)):  
             # Getting mean values of data
             data_points[x].append(numpy.median(run_datapoints[x]))
