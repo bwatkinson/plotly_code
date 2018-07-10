@@ -273,7 +273,7 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
                       std_devs, std_errs, chart_titles, y_labels)
 
 
-def create_bulk_plot_files(plot_dir, xdd_dir):    
+def create_bulk_plot_files(plot_dir, xdd_dir, grab):    
     total_runs = 0
     threads = []
     chart_titles = []
@@ -301,7 +301,8 @@ def create_bulk_plot_files(plot_dir, xdd_dir):
                      queries, 
                      chart_titles, 
                      y_labels, 
-                     threads)
+                     threads,
+                     grab)
         queries = []
         chart_titles = []
         y_labels = []
