@@ -162,7 +162,7 @@ def get_offsets(base_dir, offsets, queries):
     
 
 
-def getting_data(base_dir, queries, chart_titles, y_labels, threads):
+def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
     offsets = []
     data_points = []
     std_devs = []
@@ -244,12 +244,19 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads):
                     run_datapoints[x].append(float(line_list[offsets[x]]))
                 input_fp.close()
         
-        if t == 1:
-            print run_datapoints[x]
-            exit(1)
         for x in xrange(len(queries)):  
-            # Getting mean values of data
-            data_points[x].append(numpy.median(run_datapoints[x]))
+            if grab == 'mean':
+                # Getting mean of run values
+                data_points[x].append(numpy.mean(run_datapoints[x]))
+            if grab == 'median':
+                # Getting median of run values
+                data_points[x].append(numpy.median(run_datapoints[x]))
+            if grab == 'min':
+                # Getting min of run values
+                data_points[x].append(numpy.min(run_datapoints[x]))
+            if grab == 'max':
+                # Getting max of run values
+                data_points[x].append(numpy.max(run_datapoints[x]))
             # Getting Standard Deviation for Data Points
             std_devs[x].append(numpy.std(run_datapoints[x]))
             # Getting Standard Error for Data Points
@@ -316,10 +323,20 @@ def main():
                          help='Plot configuration input file, erither this and -d are required unless -b is used')
     parser.add_argument('-b', '--bulk', type=str,
                          help='Do bulk plot operation, either this or -d and -i are required (-b plot_file_dir,xdd_data_dir)')
+    parser.add_argument('-g', '--grab', type=str,
+                         help='Value to grab can be (mean, median, max, min), median by default')
     
     # Getting Command Line Arguements
     args = parser.parse_args()
     
+    # Checking to see if user passed in grab value
+    grab = args.grab
+    if grab != 'mean' and grab != 'median' and grab != 'max' and grab != 'min':
+        grab = 'median'
+        print 'Grabbing Median Value'
+    else:
+        print 'Grabbing ' + grab + ' value'
+
     # Checking to make sure requirements are meet
     if args.directory is None and args.input_file is None and args.bulk is None:
         # Error Either -d and -i must be set or -b must be set
@@ -335,7 +352,7 @@ def main():
         bulk_list = args.bulk.split(',')
         plot_dir = bulk_list[0].rstrip('/')
         xdd_dir = bulk_list[1].rstrip('/')
-        create_bulk_plot_files(plot_dir, xdd_dir)
+        create_bulk_plot_files(plot_dir, xdd_dir, grab)
     else:
         dir_path = args.directory.rstrip('/')
         get_threads(threads, dir_path)
@@ -344,7 +361,8 @@ def main():
                      queries, 
                      chart_titles, 
                      y_labels, 
-                     threads) 
+                     threads,
+                     grab) 
 
 if __name__ == "__main__":
     main()
