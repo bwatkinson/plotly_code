@@ -1,6 +1,6 @@
 # Example of generating plot data file
-python create_plot_files.py -d ./xdd_data_sets/xdd_with_bs_16384 -i ./plot_files/input_for_bs_16384.plot 
-python create_plot_files.py --directory ./xdd_data_sets/xdd_with_bs_16384 --input_file ./plot_files/input_for_bs_16384.plot 
+python create_plot_files.py -d ./xdd_data_sets/xdd_with_bs_16384 -i ./plot_files/xdd_with_bs_16384.plot 
+python create_plot_files.py --directory ./xdd_data_sets/xdd_with_bs_16384 --input_file ./plot_files/xdd_with_bs_16384.plot 
 python create_plot_files.py --bulk ./plot_files,./xdd_data_sets
 python create_plot_files.py -b ./plot_files,./xdd_data_sets
 
@@ -16,8 +16,13 @@ python plot_graphs.py -i all_Bandwidth_data.txt -e DEL:2,3
 python plot_graphs.py -i all_Bandwidth_data.txt -e DEL:3-DEL:2
 # If you want to add a base line (straight dashed line)  at 700.31 with a label, do the following
 python plot_graphs.py -i all_Bandwidth_data.txt -b "Device Max, 700.31"
+python plot_graphs.py -i all_Bandwidth_data.txt --baseline "Device Max, 700.31"
 # If you want to adjust the max range number of the y-axis manually, do the following
 python plot_graphs.py -i all_Bandwidth_data.txt -y 800
+python plot_graphs.py -i all_Bandwidth_data.txt --y_range_max 800
+# If you want to plot the graph on-line, then just do the following
+python plot_graph.py -i all_Bandwidth_data.txt -o
+python plot_graph.py -i all_Bandwidth_data.txt --plot_online
 
 # Example of combining multiple graphs and then plotting them
 python combine_plot_files_data.py -p point_of_interest.txt -l data_labels.txt

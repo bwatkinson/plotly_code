@@ -139,7 +139,7 @@ def update_graphs_with_excludes(traces, excludes):
             del traces[graph_num]
 
 
-def create_graphs(file_name, excludes, set_base_line, y_range_max):
+def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
     fp = open(file_name, 'r')
     one_graph = False
 
@@ -364,8 +364,10 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max):
                 data.append(base_line)
             print 'Generating plot with y-axis range [' + str(layout.yaxis.range[0]) + ',' + str(layout.yaxis.range[1]) + ']'
             fig = go.Figure(data = data, layout = layout)
-            plot(fig, filename='plot_all')
-            #py.plot(fig, filename='plot_all')
+            if plot_online:
+                py.plot(fig, filename='plot_all')
+            else:
+                plot(fig, filename='plot_all')
         else:
             print 'All plots were removed, nothing to plot'
     else:
@@ -390,8 +392,10 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max):
                     data.append(base_line)
                 print 'Generating plot with y-axis range [' + str(all_layouts[x].yaxis.range[0]) + ',' + str(all_layouts[x].yaxis.range[1]) + ']'
                 fig = go.Figure(data = data, layout = all_layouts[x])
-                plot(fig, filename='plot_' + str(x))
-                #py.plot(fig, filename='plot_' + str(x))
+                if plot_online:
+                    py.plot(fig, filename='plot_' + str(x))
+                else:
+                    plot(fig, filename='plot_' + str(x))
             else:
                 print 'Current plot was removed'
 
@@ -408,6 +412,9 @@ def main():
                         help='String and value to create baseline on plot EX: \"Device Max,5031.931\"')
     parser.add_argument('-y', '--y_range_max', type=float,
                         help='Sets the maximum value on y-axis of the plots generated')
+    parser.add_argument('-o', '--plot_online', dest='plot_online',action='store_true',
+                        help='If passed, will plot graph on-line')
+    parser.set_defaults(plot_online=False)
 
     try:
         args = parser.parse_args()
@@ -421,7 +428,11 @@ def main():
     except:
         print 'Invalid file passed into script...'
         exit(1)
-    create_graphs(args.input_file, args.exclude, args.baseline, args.y_range_max)
+    create_graphs(args.input_file, 
+                  args.exclude, 
+                  args.baseline, 
+                  args.y_range_max,
+                  args.plot_online)
 
 if __name__ == '__main__':
     main()
