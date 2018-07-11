@@ -22,7 +22,7 @@ std_dev_up_label = 'Upper Bound Std. Dev'
 std_dev_down_label = 'Lower Bound Std. Dev'
 
 # Sets the legend placement on plot
-legend_placement = dict(x = 0.85, y = 0.05)
+legend_placement = dict(x = 0.85, y = 0.01)
 
 # Base line global object to be filled out below
 base_line = go.Scatter(name = '',
@@ -317,18 +317,18 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max):
                 curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
             if y_min in curr_trace[0].y:
                 curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
-  
+ 
+    base_line_valsi = []
     # Creating base line trace if it was requested 
     if set_base_line != None:
         base_line_vals = set_base_line.split(',')
-        print base_line_vals
         if len(base_line_vals) == 2:
-            base_line.name = base_line_vals[0]
+            base_line.name = base_line_vals[0] + ' (' + base_line_vals[1] + ')'
             base_line.x = all_trace[0][0].x
             for y in xrange(y_vals_len):
                 base_line.y.append(float(base_line_vals[1]))
             base_line.text = list(str(' ') * y_vals_len)
-            base_line.text[0] = '<b>' + base_line_vals[1] + '</b>'
+            #base_line.text[0] = '<b>' + base_line_vals[1] + '</b>'
         else:
             print 'Base line requires Name and Value... Not adding baseline'
     
@@ -345,12 +345,15 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max):
                     curr_max_y = max(curr_trace.y)
                     if curr_max_y > max_y:
                         max_y = curr_max_y
-            all_layouts[0].yaxis.range = [0,max_y + 100] 
+            if base_line.name != '' and float(base_line_vals[1]) > max_y + 100:
+                all_layouts[0].yaxis.range = [0, float(base_line_vals[1]) + 25]
+            else:
+                all_layouts[0].yaxis.range = [0,max_y + 100] 
         else:
             for trace_x in all_trace:
                 for curr_trace in trace_x:
                     data.append(curr_trace)
-            all_layouts[0].yaxis.range = [0,y_range_max]
+            all_layouts[0].yaxis.range = [0, y_range_max]
              
         # Since we are creating only one graph, we will use only one
         # layout
@@ -359,6 +362,7 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max):
             # Will add baseline to plot if it was setup above
             if base_line.name != '':
                 data.append(base_line)
+            print 'Generating plot with y-axis range [' + str(layout.yaxis.range[0]) + ',' + str(layout.yaxis.range[1]) + ']'
             fig = go.Figure(data = data, layout = layout)
             plot(fig, filename='plot_all')
             #py.plot(fig, filename='plot_all')
@@ -374,13 +378,17 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max):
                     curr_max_y = max(trace.y)
                     if curr_max_y > max_y:
                         max_y = curr_max_y
-                all_layouts[x].yaxis.range = [0,max_y + 100]        
+                if base_line.name != '' and float(base_line_vals[1]) > max_y + 100:
+                    all_layouts[x].yaxis.range = [0, float(base_line_vals[1]) + 25]
+                else:
+                    all_layouts[x].yaxis.range = [0,max_y + 100]        
             else:
                 all_layouts[x].yaxis.range = [0, y_range_max]
             if len(data) != 0:
                 # Will add baseline to plot if it was setup above
                 if base_line.name != '':
                     data.append(base_line)
+                print 'Generating plot with y-axis range [' + str(all_layouts[x].yaxis.range[0]) + ',' + str(all_layouts[x].yaxis.range[1]) + ']'
                 fig = go.Figure(data = data, layout = all_layouts[x])
                 plot(fig, filename='plot_' + str(x))
                 #py.plot(fig, filename='plot_' + str(x))
