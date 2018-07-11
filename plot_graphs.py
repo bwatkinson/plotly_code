@@ -21,7 +21,10 @@ title_fonts = dict(family = 'Times New Roman',
 std_dev_up_label = 'Upper Bound Std. Dev'
 std_dev_down_label = 'Lower Bound Std. Dev'
 
-# Need to set x, name
+# Sets the legend placement on plot
+legend_placement = dict(x = 0.85, y = 0.05)
+
+# Base line global object to be filled out below
 base_line = go.Scatter(name = '',
                        line = dict(width = 3,
                                    dash = 'dash',
@@ -194,7 +197,7 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max):
                                                       ticks = 'outside',
                                                       tickvals = x_vals
                                                  ),
-                                            legend = dict(x = 0.85, y = 0.05)
+                                            legend = legend_placement 
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
