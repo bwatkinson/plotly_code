@@ -1,5 +1,5 @@
-# from plotly import __version__
-# from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+from plotly import __version__
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 import plotly.plotly as py
 import plotly.graph_objs as go
 import argparse
@@ -20,6 +20,22 @@ title_fonts = dict(family = 'Times New Roman',
 
 std_dev_up_label = 'Upper Bound Std. Dev'
 std_dev_down_label = 'Lower Bound Std. Dev'
+
+# Need to set x, name
+base_line = go.Scatter(name = '',
+                       line = dict(width = 3,
+                                   dash = 'dash',
+                                   shape = 'spline',
+                                   color = 'rgb(0,0,0)'
+                                   ),
+                       marker = dict(opacity = 1,
+                                     size = 7,
+                                     line = dict(width = 1.5)
+                                     ),
+                       mode = 'lines+text',
+                       textposition = 'top right',
+                       y = []
+            )
 
 #############################################################
 
@@ -120,7 +136,7 @@ def update_graphs_with_excludes(traces, excludes):
             del traces[graph_num]
 
 
-def create_graphs(file_name, excludes):
+def create_graphs(file_name, excludes, set_base_line, y_range_max):
     fp = open(file_name, 'r')
     one_graph = False
 
@@ -147,18 +163,19 @@ def create_graphs(file_name, excludes):
         line = fp.readline()
         line_split = line.split(',')
         if line_split[0].replace('# ','') == 'line':
-            all_trace[x].append(go.Scatter(x=x_vals,name=line_split[len(line_split) - 1],
+            all_trace[x].append(go.Scatter(x=x_vals,
+                                           name=line_split[len(line_split) - 1],
                                            line = dict(width = 1,
                                                        dash = 'solid',
                                                        shape = 'spline'
                                                   ),
-                                           marker = dict(opacity = 1,
-                                                         size = 7,
-                                                         line = dict(width = 1.5)
-                                                    ),
-                                           mode = 'lines+markers+text',
-                                           textposition = 'top right'
-                                          )
+                                            marker = dict(opacity = 1,
+                                                          size = 7,
+                                                          line = dict(width = 1.5)
+                                                     ),
+                                            mode = 'lines+markers+text',
+                                            textposition = 'bottom right'
+                                            )
                                )
             all_layouts.append(go.Layout(title = '<b>' + line_split[1] + '</b>',
 		                                 titlefont =  chart_title_font, 
@@ -166,7 +183,7 @@ def create_graphs(file_name, excludes):
 		                                              titlefont = title_fonts,
                                                       autorange = False,
                                                       gridwidth = 2,
-                                                      range = [0, x_vals[len(x_vals) - 1] + 10],
+                                                      range = [0, x_vals[len(x_vals) - 1] + 2],
                                                       showgrid = True,
                                                       showline = False,
                                                       type = 'linear',
@@ -176,7 +193,8 @@ def create_graphs(file_name, excludes):
                                                       tickcolor = 'rgb(0, 0, 0)',
                                                       ticks = 'outside',
                                                       tickvals = x_vals
-                                                 )
+                                                 ),
+                                            legend = dict(x = 0.85, y = 0.05)
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
@@ -231,7 +249,6 @@ def create_graphs(file_name, excludes):
                     if chart.type == 'bar':
                         # If this is a bar chart, we will not add standard deviations
                         break
-
                     if line_split[len(line_split) - 1] == chart.name:
                         all_trace[x].append(go.Scatter(name = std_dev_up_label,
 			                                           y = list( map(add, chart.y, std_dev) ),
@@ -269,6 +286,7 @@ def create_graphs(file_name, excludes):
                 print 'Unknown point of interest'
                 continue
 
+    # Taking care of any excludes requested
     update_graphs_with_excludes(all_trace, excludes)
 
     # Getting all y values from data traces, so we can just label min and
@@ -296,42 +314,73 @@ def create_graphs(file_name, excludes):
                 curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
             if y_min in curr_trace[0].y:
                 curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
+  
+    # Creating base line trace if it was requested 
+    if set_base_line != None:
+        base_line_vals = set_base_line.split(',')
+        print base_line_vals
+        if len(base_line_vals) == 2:
+            base_line.name = base_line_vals[0]
+            base_line.x = all_trace[0][0].x
+            for y in xrange(y_vals_len):
+                base_line.y.append(float(base_line_vals[1]))
+            base_line.text = list(str(' ') * y_vals_len)
+            base_line.text[0] = '<b>' + base_line_vals[1] + '</b>'
+        else:
+            print 'Base line requires Name and Value... Not adding baseline'
     
     # Setting data range for y values
     max_y = 0
     if one_graph:
         data = []
-        for trace_x in all_trace:
-            for curr_trace in trace_x:
-                data.append(curr_trace)
-                curr_max_y = max(curr_trace.y)
-                if curr_max_y > max_y:
-                    max_y = curr_max_y
+        # Auto setting Y-Axis
+        # here we need to get find max_y
+        if y_range_max == None:
+            for trace_x in all_trace:
+                for curr_trace in trace_x:
+                    data.append(curr_trace)
+                    curr_max_y = max(curr_trace.y)
+                    if curr_max_y > max_y:
+                        max_y = curr_max_y
+            all_layouts[0].yaxis.range = [0,max_y + 100] 
+        else:
+            for trace_x in all_trace:
+                for curr_trace in trace_x:
+                    data.append(curr_trace)
+            all_layouts[0].yaxis.range = [0,y_range_max]
+             
         # Since we are creating only one graph, we will use only one
         # layout
-        # here we need to get find max_y
-        all_layouts[0].yaxis.range = [0,max_y + 50] 
         layout = all_layouts[0]
         if len(data) != 0:
+            # Will add baseline to plot if it was setup above
+            if base_line.name != '':
+                data.append(base_line)
             fig = go.Figure(data = data, layout = layout)
-            # plot(fig, filename='plot_all')
-            py.plot(fig, filename='plot_all')
+            plot(fig, filename='plot_all')
+            #py.plot(fig, filename='plot_all')
         else:
             print 'All plots were removed, nothing to plot'
     else:
         for x in xrange(len(all_layouts)):
             max_y = 0
             data = []
-            for trace in all_trace[x]:
-                data.append(trace)
-                curr_max_y = max(trace.y)
-                if curr_max_y > max_y:
-                    max_y = curr_max_y
-            all_layouts[x].yaxis.range = [0,max_y + 50]        
+            if y_range_max == None:
+                for trace in all_trace[x]:
+                    data.append(trace)
+                    curr_max_y = max(trace.y)
+                    if curr_max_y > max_y:
+                        max_y = curr_max_y
+                all_layouts[x].yaxis.range = [0,max_y + 100]        
+            else:
+                all_layouts[x].yaxis.range = [0, y_range_max]
             if len(data) != 0:
+                # Will add baseline to plot if it was setup above
+                if base_line.name != '':
+                    data.append(base_line)
                 fig = go.Figure(data = data, layout = all_layouts[x])
-                # plot(fig, filename='plot_' + str(x))
-                py.plot(fig, filename='plot_' + str(x))
+                plot(fig, filename='plot_' + str(x))
+                #py.plot(fig, filename='plot_' + str(x))
             else:
                 print 'Current plot was removed'
 
@@ -344,15 +393,24 @@ def main():
                         required=True)
     parser.add_argument('-e', '--exclude', type=str,
                         help='Values to exclude from generated plot')
+    parser.add_argument('-b', '--baseline', type=str,
+                        help='String and value to create baseline on plot EX: \"Device Max,5031.931\"')
+    parser.add_argument('-y', '--y_range_max', type=float,
+                        help='Sets the maximum value on y-axis of the plots generated')
 
     try:
         args = parser.parse_args()
     except:
         parser.print_help()
         sys.exit(0)
-
-    input_file = args.input_file
-    create_graphs(input_file, args.exclude)
+    
+    try:
+        fp = open(args.input_file)
+        fp.close()
+    except:
+        print 'Invalid file passed into script...'
+        exit(1)
+    create_graphs(args.input_file, args.exclude, args.baseline, args.y_range_max)
 
 if __name__ == '__main__':
     main()
