@@ -6,7 +6,7 @@ def parse_point_of_interest_file(poi_file, input_files):
     poi = ''
     with open(poi_file, 'r') as fp:
         for line in fp:
-            if '.txt' in line:
+            if '.txt' in line and '#' not in line:
                 input_files.append(line)
             elif '#' not in line:
                 poi = line    
