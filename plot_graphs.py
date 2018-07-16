@@ -22,7 +22,7 @@ std_dev_up_label = 'Upper Bound Std. Dev'
 std_dev_down_label = 'Lower Bound Std. Dev'
 
 # Sets the legend placement on plot
-legend_placement = dict(x = 0.85, y = 0.01)
+legend_placement = dict(x = 0.80, y = 0.01)
 
 # Base line global object to be filled out below
 base_line = go.Scatter(name = '',
@@ -36,9 +36,14 @@ base_line = go.Scatter(name = '',
                                      line = dict(width = 1.5)
                                      ),
                        mode = 'lines+text',
-                       textposition = 'top right',
+                       textposition = 'bottom right',
                        y = []
             )
+
+text_positions = ['top center', 'bottom center', 'top left', 'bottom left',
+                  'top right', 'bottom right']
+
+text_position_offset = 0
 
 #############################################################
 
@@ -161,7 +166,9 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
     # List of lists
     all_trace = [[] for l in xrange(total_datasets)]
     all_layouts = []
-	    
+	
+    
+        
     for x in xrange(total_datasets):
         line = fp.readline()
         line_split = line.split(',')
@@ -177,9 +184,12 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
                                                           line = dict(width = 1.5)
                                                      ),
                                             mode = 'lines+markers+text',
-                                            textposition = 'bottom right'
+                                            textposition = 'top center'
                                             )
                                )
+
+            #all_trace[x][0].textposition = 'bottom cetner'
+            
             all_layouts.append(go.Layout(title = '<b>' + line_split[1] + '</b>',
 		                                 titlefont =  chart_title_font, 
                                          xaxis = dict(title = x_title,
@@ -201,13 +211,15 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
-            all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1],
-                                       textposition = 'auto'
+            x_vals_str = [str(value) + ' Threads' for value in x_vals]
+            all_trace[x].append(go.Bar(x=x_vals_str,
+                                       textposition = 'auto',
+                                       name=line_split[len(line_split) -1],
                                       )
                                )
-            all_trace[x].append(go.Bar(x=x_vals, name=line_split[len(line_split) -1]))
             all_layouts.append(go.Layout(title='<b>' + line_split[1] + '</b>',
 		                                 titlefont = chart_title_font,
+                                         barmode='group',
                                          xaxis = dict(title = x_title,
 		                                              titlefont = title_fonts,
                                                       zeroline = True,
@@ -215,7 +227,7 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
                                                       showticklabels = True,
                                                       tickcolor = 'rgb(0, 0, 0)',
                                                       ticks = 'outside',
-                                                      tickvals = x_vals
+                                                      tickvals = x_vals_str
                                                  )
                                          )
                                )
@@ -312,13 +324,16 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
         y_max = max(curr_y_vals)
         y_min = min(curr_y_vals)
         for curr_trace in all_trace:
+            if curr_trace[0].type == 'bar':
+                curr_trace[0].text = [str(val) for val in curr_trace[0].y]
+                continue
             curr_trace[0].opacity
             if y_max in curr_trace[0].y:
                 curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
             if y_min in curr_trace[0].y:
                 curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
  
-    base_line_valsi = []
+    base_line_vals = []
     # Creating base line trace if it was requested 
     if set_base_line != None:
         base_line_vals = set_base_line.split(',')
