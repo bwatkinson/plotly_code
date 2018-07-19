@@ -22,7 +22,10 @@ std_dev_up_label = 'Upper Bound Std. Dev'
 std_dev_down_label = 'Lower Bound Std. Dev'
 
 # Sets the legend placement on plot
-legend_placement = dict(x = 0.80, y = 0.01)
+#legend_placement = dict(x = 0.80, y = 0.01)
+
+# Bar Chart legend placement on plot
+bar_legend_placement = dict(y = 0.90)
 
 # Base line global object to be filled out below
 base_line = go.Scatter(name = '',
@@ -144,7 +147,7 @@ def update_graphs_with_excludes(traces, excludes):
             del traces[graph_num]
 
 
-def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
+def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, all_labels):
     fp = open(file_name, 'r')
     one_graph = False
 
@@ -188,15 +191,13 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
                                             )
                                )
 
-            #all_trace[x][0].textposition = 'bottom cetner'
-            
             all_layouts.append(go.Layout(title = '<b>' + line_split[1] + '</b>',
 		                                 titlefont =  chart_title_font, 
                                          xaxis = dict(title = x_title,
 		                                              titlefont = title_fonts,
                                                       autorange = False,
                                                       gridwidth = 2,
-                                                      range = [0, x_vals[len(x_vals) - 1] + 2],
+                                                      range = [x_vals[0] - 1, x_vals[len(x_vals) - 1] + 2],
                                                       showgrid = True,
                                                       showline = False,
                                                       type = 'linear',
@@ -207,7 +208,7 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
                                                       ticks = 'outside',
                                                       tickvals = x_vals
                                                  ),
-                                            legend = legend_placement 
+                                            #legend = legend_placement 
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
@@ -228,7 +229,8 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
                                                       tickcolor = 'rgb(0, 0, 0)',
                                                       ticks = 'outside',
                                                       tickvals = x_vals_str
-                                                 )
+                                                 ),
+                                         legend = bar_legend_placement 
                                          )
                                )
         else: # bail don't know char type
@@ -304,34 +306,38 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online):
     # Taking care of any excludes requested
     update_graphs_with_excludes(all_trace, excludes)
 
-    # Getting all y values from data traces, so we can just label min and
-    # max below
-    all_y_vals = []
-    y_vals_len = 0
-    for curr_trace in all_trace:
-        all_y_vals.append(curr_trace[0].y)
-        y_vals_len = len(curr_trace[0].y)
-
-    # Setting all trace text labels to empty to begin with
-    for curr_trace in all_trace:
-        curr_trace[0].text = list(str(' ') * y_vals_len)
-
-    # We are only going to label the min and max of the data sets
-    for x in xrange(y_vals_len):
-        curr_y_vals = []
-        for z in xrange(len(all_y_vals)):
-            curr_y_vals.append(all_y_vals[z][x])
-        y_max = max(curr_y_vals)
-        y_min = min(curr_y_vals)
+    if all_labels:
         for curr_trace in all_trace:
-            if curr_trace[0].type == 'bar':
-                curr_trace[0].text = [str(val) for val in curr_trace[0].y]
-                continue
-            curr_trace[0].opacity
-            if y_max in curr_trace[0].y:
-                curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
-            if y_min in curr_trace[0].y:
-                curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
+            curr_trace[0].text = [str(val) for val in curr_trace[0].y]
+    else:
+        # Getting all y values from data traces, so we can just label min and
+        # max below
+        all_y_vals = []
+        y_vals_len = 0
+        for curr_trace in all_trace:
+            all_y_vals.append(curr_trace[0].y)
+            y_vals_len = len(curr_trace[0].y)
+
+        # Setting all trace text labels to empty to begin with
+        for curr_trace in all_trace:
+            curr_trace[0].text = list(str(' ') * y_vals_len)
+
+        # We are only going to label the min and max of the data sets
+        for x in xrange(y_vals_len):
+            curr_y_vals = []
+            for z in xrange(len(all_y_vals)):
+                curr_y_vals.append(all_y_vals[z][x])
+            y_max = max(curr_y_vals)
+            y_min = min(curr_y_vals)
+            for curr_trace in all_trace:
+                if curr_trace[0].type == 'bar':
+                    curr_trace[0].text = [str(val) for val in curr_trace[0].y]
+                    continue
+                curr_trace[0].opacity
+                if y_max in curr_trace[0].y:
+                    curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
+                if y_min in curr_trace[0].y:
+                    curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
  
     base_line_vals = []
     # Creating base line trace if it was requested 
@@ -430,6 +436,9 @@ def main():
     parser.add_argument('-o', '--plot_online', dest='plot_online',action='store_true',
                         help='If passed, will plot graph on-line')
     parser.set_defaults(plot_online=False)
+    parser.add_argument('-a', '--all_labels', dest='all_labels', action='store_true',
+                        help='If passed, will show all labels in graph')
+    parser.set_defaults(all_labels=False)
 
     try:
         args = parser.parse_args()
@@ -447,7 +456,8 @@ def main():
                   args.exclude, 
                   args.baseline, 
                   args.y_range_max,
-                  args.plot_online)
+                  args.plot_online,
+                  args.all_labels)
 
 if __name__ == '__main__':
     main()
