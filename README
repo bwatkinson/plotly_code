@@ -23,6 +23,9 @@ python plot_graphs.py -i all_Bandwidth_data.txt --y_range_max 800
 # If you want to plot the graph on-line, then just do the following
 python plot_graph.py -i all_Bandwidth_data.txt -o
 python plot_graph.py -i all_Bandwidth_data.txt --plot_online
+# If you want all data points to be labeled, then just do the following
+python plot_graph.py -i all_Bandwidth_data.txt -a
+python plot_graph.py -i all_Bandwidth_data.txt --all_labels
 
 # Example of combining multiple graphs and then plotting them
 python combine_plot_files_data.py -p point_of_interest.txt -l data_labels.txt
