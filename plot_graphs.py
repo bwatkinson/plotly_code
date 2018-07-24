@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 import argparse
 import sys
 import bisect
+import re
 from operator import add, sub
 
 #############################################################
@@ -160,11 +161,6 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
     # Getting number of datasets and y_vals per dataset
     total_datasets = int(vals[0])
     poi = int(vals[1])
-    line = fp.readline()
-    line_split = line.split(',')
-    x_title = line_split[1].replace('\n','')
-    line = fp.readline()
-    x_vals = [int(s) for s in line.split() if s.isdigit()]
 
     # List of lists
     all_trace = [[] for l in xrange(total_datasets)]
@@ -173,9 +169,18 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
     
         
     for x in xrange(total_datasets):
+        # Getting the x-vals for this graph
+        line = fp.readline()
+        line_split = line.split(',')
+        x_title = line_split[1].replace('\n','')
+        line = fp.readline()
+        x_vals_str = line
+
         line = fp.readline()
         line_split = line.split(',')
         if line_split[0].replace('# ','') == 'line':
+            # If we are doing a line plot, the x_vals must be ints
+            x_vals = [int(s) for s in x_vals_str.split() if s.isdigit()]
             all_trace[x].append(go.Scatter(x=x_vals,
                                            name=line_split[len(line_split) - 1],
                                            line = dict(width = 1,
@@ -190,6 +195,9 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                                             textposition = 'top center'
                                             )
                                )
+
+            #if x == 1 or x == 4:
+            #    all_trace[x][0].textposition = 'bottom center'
 
             all_layouts.append(go.Layout(title = '<b>' + line_split[1] + '</b>',
 		                                 titlefont =  chart_title_font, 
@@ -212,8 +220,12 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                                          )
                                )
         elif line_split[0].replace('# ','') == 'bar':
-            x_vals_str = [str(value) + ' Threads' for value in x_vals]
-            all_trace[x].append(go.Bar(x=x_vals_str,
+            x_vals_str_line = x_vals_str.split(',')
+            curr_pos = 0
+            for x_str in x_vals_str_line:
+                x_vals_str_line[curr_pos] = x_str.strip()
+                curr_pos += 1
+            all_trace[x].append(go.Bar(x=x_vals_str_line,
                                        textposition = 'auto',
                                        name=line_split[len(line_split) -1],
                                       )
