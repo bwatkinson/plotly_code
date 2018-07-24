@@ -7,7 +7,7 @@ import numpy
 
 acceptable_queries = ['Pass', 'Target', 'Queue', 'Bytes_Xfered', 'Ops'
                       'Elapsed', 'Bandwidth', 'IOPS', 'Latency', 'Pct_CPU',
-                      'Xfer_Size']
+                      'Xfer_Size', 'Compress_Size', 'Physical_Bandwidth']
 
 def get_total_num_passes(basedir):
     num_passes = 0
@@ -101,6 +101,37 @@ def parse_input_file(input_file, queries, chart_titles, y_labels):
             print 'Exiting program...' 
             exit(1)
 
+    # Updating query list if Physical_Bandwidth is a query
+    physical_index = -1
+    try:
+        physical_index = queries.index('Physical_Bandwidth')
+        queries.pop(physical_index)
+        queries.append('Physical_Bandwidth')
+        # Moving the chart titles and y labels
+        phys_chart_title = chart_titles.pop(physical_index)
+        chart_titles.append(phys_chart_title)
+        phys_y_label = y_labels.pop(physical_index)
+        y_labels.append(phys_y_label)
+    except:
+        # Nothing to do, so don't worry about it
+        pass
+
+    # Now need to place Compression Size at the end of the list
+    # if it is a query
+    compress_size_index = -1
+    try:
+        compress_size_index = queries.index('Compress_Size')
+        queries.pop(compress_size_index)
+        queries.append('Compress_Size')
+        # Moving the chart titles and y labels
+        comp_size_chart_title = chart_titles.pop(compress_size_index)
+        chart_titles.append(comp_size_chart_title)
+        comp_y_label = y_labels.pop(compress_size_index)
+        y_labels.append(comp_y_label)
+    except:
+        # Nothing to do, so don't worry about it
+        pass
+
 
 def parse_test_case_header(fp, queries):
     #looking for DD command output, so will skip everything else
@@ -109,7 +140,14 @@ def parse_test_case_header(fp, queries):
         line = fp.readline()
     fp.readline()
 
-
+def jump_to_zfs_list_input(fp):
+    #looking for MOUNTPOINT
+    last_pos = fp.tell()
+    line = fp.readline()
+    while line.find('MOUNTPOINT') == -1:
+        last_pos = fp.tell()
+        line = fp.readline()
+    return last_pos
 
 def write_output_file(output_file_name, queries, threads, data_points, \
                       std_devs, std_errs, chart_titles, y_labels):
@@ -117,12 +155,15 @@ def write_output_file(output_file_name, queries, threads, data_points, \
     # Writing out how many data sets there are along with each
     # datasets corresponding values
     fp.write(str(len(data_points)) + ' ' + '3\n')
-    # Writing out the x values
-    fp.write('# x-title,Number of I/O Threads\n')
-    for x in threads:
-        fp.write(str(x) + ' ')
-    fp.write('\n')
     for x in xrange(len(data_points)):
+        # Writing out the x values
+        fp.write('# x-title,Number of I/O Threads\n')
+        for t in threads:
+            if chart_titles[x].split(',')[0] == 'line':
+                fp.write(str(t) + ' ')
+            elif chart_titles[x].split(',')[0] == 'bar':
+                fp.write(str(t) + ' Threads, ')
+        fp.write('\n')
         y_label_split = y_labels[x].split(',')
         # Writing out chart titles
         fp.write('# ')
@@ -149,17 +190,65 @@ def write_output_file(output_file_name, queries, threads, data_points, \
 
 
 def get_offsets(base_dir, offsets, queries):
-    file_names = glob.glob(base_dir + '/' + '*.txt')
+    zfs_list_ouput_present = False
+    set_compress_size_offset = False
+
     # Just grabbing the first file as it doesn't really matter
     # what the file is, because of the offsets will be the same 
+    file_names = glob.glob(base_dir + '/' + '*.txt')
+   
+    # If either the query Physical_Bandwidth or Compress_Size
+    # is desired, we first must make sure that the output file
+    # has the proper ZFS list output. If it doesn't we will
+    # just bail
+    if 'Physical_Bandwidth' in queries or 'Compress_Size' in queries:
+        with open(file_names[0]) as fp:
+            line = fp.readline()
+            while line:
+                if line.find('MOUNTPOINT') != -1:
+                    zfs_list_output_present = True
+                    break
+                line = fp.readline()
+        if zfs_list_output_present != True:
+            print 'In order to query Physical_Bandwidth or Compress_size the output must'
+            print 'contain the output from zfs list... Exiting'
+            exit(1)
+
+    # If the query is Physical_Bandwidth, need to update the
+    # query value to search for to Elapsed. We are merely
+    # getting the total time to transfer data
+    copy_queries = list(queries)
+    physical_index = -1
+    try:
+        physical_index = copy_queries.index('Physical_Bandwidth')
+        copy_queries[physical_index] = 'Elapsed'
+    except:
+        # Nothing to do, so don't worry about it
+        pass
+
+    # If Compress_Size is a query we know of the offset, so we will
+    # just manually set it
+    compress_size_index = -1
+    try:
+        compress_size_index = copy_queries.index('Compress_Size')
+        set_compress_size_offset = True
+    except:
+        # Nothing to do, so don't worry about it
+        pass
+
+
     with open(file_names[0]) as fp:
         line = fp.readline()
-        while line.find(queries[0]) == -1:
-            line = fp.readline()
+        while line.find(copy_queries[0]) == -1:
+           line = fp.readline()
         line_list = line.split()
-        for x in queries:
-            offsets.append(line_list.index(x))
+        for x in copy_queries:
+            if x != 'Compress_Size':
+                offsets.append(line_list.index(x))
     
+    # Finally just put the offset of Compress_Size if we need to
+    if set_compress_size_offset:
+        offsets.append(1)
 
 
 def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
@@ -209,6 +298,18 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
                 line_list = line.split()
                 # Getting data points of interest for this run
                 for x in xrange(len(queries)):
+                    # If query is Compress_Size, we just need to read to the
+                    # end of the file and grab the amount of data
+                    if queries[x] == 'Compress_Size':
+                        if 'MOUNTPOINT' not in line_list:
+                            jump_to_zfs_list_input(input_fp)
+                        line = input_fp.readline()
+                        line_list = line.split()
+                        # Removing size of file from ZFS list output
+                        line_list[offsets[x]] = line_list[offsets[x]][:-1]
+                        run_datapoints[x].append(float(line_list[offsets[x]]))
+                        continue
+                        
                     new_line_list = []
                     # Hacky work around to fix extra tab inserted
                     # in XDD output for certain PASS'es. Our only
@@ -228,6 +329,18 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
                                 new_line_list.append(curr_val)
                         line_list = new_line_list
                     run_datapoints[x].append(float(line_list[offsets[x]]))
+                    
+                    # If the query is Physical_Bandwidth, we must also grab
+                    # the actual file size at end of file and do the conversion
+                    # division
+                    if queries[x] == 'Physical_Bandwidth':
+                        last_pos = jump_to_zfs_list_input(input_fp)
+                        line = input_fp.readline()
+                        line_list = line.split()
+                        # Removing size of file from ZFS list output
+                        line_list[1] = line_list[1][:-1]
+                        run_datapoints[x] = float(line_list[1])*1024/run_datapoints[x][p]
+                        input_fp.seek(last_pos)
             input_fp.close()
         else:
             for r in range(1,runs+1):
@@ -241,7 +354,31 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
                 line_list = line.split()
                 # Getting data points of interest for this run
                 for x in xrange(len(queries)):
+                    # If query is Compress_Size, we just need to read to the
+                    # end of the file and grab the amount of data
+                    if queries[x] == 'Compress_Size':
+                        if 'MOUNTPOINT' not in line_list:
+                            jump_to_zfs_list_input(input_fp)
+                        line = input_fp.readline()
+                        line_list = line.split()
+                        # Removing size of file from ZFS list output
+                        line_list[offset[x]] = line_list[offset[x]][:-1]
+                        run_datapoints[x].append(float(line_list[offsets[x]]))
+                        continue
+                    
                     run_datapoints[x].append(float(line_list[offsets[x]]))
+                    
+                    # If the query is Physical_Bandwidth, we must also grab
+                    # the actual file size at end of file and do the conversion
+                    # division
+                    if queries[x] == 'Physical_Bandwidth':
+                        last_pos = jump_to_zfs_list_input(input_fp)
+                        line = input_fp.readline()
+                        line_list = line.split()
+                        # Removing size of file from ZFS list output
+                        line_list[1] = line_list[1][:-1]
+                        run_datapoints[x] = float(line_list[1])*1024/run_datapoints[x][p]
+                        input_fp.seek(last_pos)
                 input_fp.close()
         
         for x in xrange(len(queries)):  
