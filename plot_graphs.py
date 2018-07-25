@@ -180,7 +180,10 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
         line_split = line.split(',')
         if line_split[0].replace('# ','') == 'line':
             # If we are doing a line plot, the x_vals must be ints
-            x_vals = [int(s) for s in x_vals_str.split() if s.isdigit()]
+            x_vals_str_line = x_vals_str.split()
+            # Removing tag from end of list
+            x_vals_str_line[len(x_vals_str_line) - 1] = x_vals_str_line[len(x_vals_str_line) - 1].split(',')[0]
+            x_vals = [int(s) for s in x_vals_str_line if s.isdigit()]
             all_trace[x].append(go.Scatter(x=x_vals,
                                            name=line_split[len(line_split) - 1],
                                            line = dict(width = 1,
@@ -221,6 +224,8 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                                )
         elif line_split[0].replace('# ','') == 'bar':
             x_vals_str_line = x_vals_str.split(',')
+            # Removing tag from the list
+            x_vals_str_line.pop(len(x_vals_str_line) - 1)
             curr_pos = 0
             for x_str in x_vals_str_line:
                 x_vals_str_line[curr_pos] = x_str.strip()
