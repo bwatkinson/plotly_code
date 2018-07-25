@@ -157,7 +157,7 @@ def write_output_file(output_file_name, queries, threads, data_points, \
     fp.write(str(len(data_points)) + ' ' + '3\n')
     for x in xrange(len(data_points)):
         # Writing out the x values
-        fp.write('# x-title,Number of I/O Threads\n')
+        fp.write('# x-title,Number of I/O Threads,' + queries[x] + '\n')
         for t in threads:
             if chart_titles[x].split(',')[0] == 'line':
                 fp.write(str(t) + ' ')
