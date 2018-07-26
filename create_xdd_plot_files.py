@@ -236,15 +236,18 @@ def get_offsets(base_dir, offsets, queries):
         # Nothing to do, so don't worry about it
         pass
 
-
-    with open(file_names[0]) as fp:
-        line = fp.readline()
-        while line.find(copy_queries[0]) == -1:
-           line = fp.readline()
-        line_list = line.split()
-        for x in copy_queries:
-            if x != 'Compress_Size':
-                offsets.append(line_list.index(x))
+    # If the only query is Compress_Size, we do not need to get offsets
+    if len(copy_queries) == 1 and copy_queries[0] == 'Compress_Size':
+        pass
+    else:
+        with open(file_names[0]) as fp:
+            line = fp.readline()
+            while line.find(copy_queries[0]) == -1:
+                line = fp.readline()
+            line_list = line.split()
+            for x in copy_queries:
+                if x != 'Compress_Size':
+                    offsets.append(line_list.index(x))
     
     # Finally just put the offset of Compress_Size if we need to
     if set_compress_size_offset:
@@ -290,8 +293,13 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
             current_input = input_file
             current_input += '_threads_' + str(t) + '.txt'
             input_fp = open(current_input, 'r')
-            # Parsing out XDD normal header info
-            parse_test_case_header(input_fp, queries)
+            if len(queries) == 1 and queries[0] == 'Compress_Size':
+                # If the only query is Compress_Size we do not need to
+                # get to actual XDD output just ZFS list output
+                pass
+            else:
+                # Parsing out XDD normal header info
+                parse_test_case_header(input_fp, queries)
             # Getting all datapoints
             for p in xrange(num_passes):
                 line = input_fp.readline()
@@ -348,8 +356,13 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
                 current_input = input_file
                 current_input += str(r) + '_threads_' + str(t) + '.txt'
                 input_fp = open(current_input, 'r')
-                # Parsing out XDD normal header info
-                parse_test_case_header(input_fp, queries)
+                if len(queries) == 1 and queries[0] == 'Compress_Size':
+                    # If the only query is Compress_Size we do not need to
+                    # get to actual XDD output just ZFS list output
+                    pass
+                else:
+                    # Parsing out XDD normal header info
+                    parse_test_case_header(input_fp, queries)
                 line = input_fp.readline()
                 line_list = line.split()
                 # Getting data points of interest for this run

@@ -231,7 +231,9 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                 x_vals_str_line[curr_pos] = x_str.strip()
                 curr_pos += 1
             all_trace[x].append(go.Bar(x=x_vals_str_line,
-                                       textposition = 'auto',
+                                       textposition = 'outside',
+                                       #textposition = 'auto',
+                                       #textposition = 'inside',
                                        name=line_split[len(line_split) -1],
                                       )
                                )
@@ -324,8 +326,13 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
     update_graphs_with_excludes(all_trace, excludes)
 
     if all_labels:
+        #trace_val = 0
         for curr_trace in all_trace:
+        #    if trace_val == 0 or trace_val == 6 or trace_val == 2 or trace_val == 4 or trace_val == 6 or trace_val == 1:
             curr_trace[0].text = [str(val) for val in curr_trace[0].y]
+         #   else:
+         #       pass
+         #   trace_val += 1
     else:
         # Getting all y values from data traces, so we can just label min and
         # max below
