@@ -148,7 +148,7 @@ def update_graphs_with_excludes(traces, excludes):
             del traces[graph_num]
 
 
-def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, all_labels):
+def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, all_labels, labels):
     fp = open(file_name, 'r')
     one_graph = False
 
@@ -326,13 +326,8 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
     update_graphs_with_excludes(all_trace, excludes)
 
     if all_labels:
-        #trace_val = 0
         for curr_trace in all_trace:
-        #    if trace_val == 0 or trace_val == 6 or trace_val == 2 or trace_val == 4 or trace_val == 6 or trace_val == 1:
             curr_trace[0].text = [str(val) for val in curr_trace[0].y]
-         #   else:
-         #       pass
-         #   trace_val += 1
     else:
         # Getting all y values from data traces, so we can just label min and
         # max below
@@ -363,6 +358,17 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                 if y_min in curr_trace[0].y:
                     curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
  
+    
+    if labels != None:
+        labels_list = labels.split(',')
+        # Resetting all labels to nothing
+        for curr_trace in all_trace:
+            curr_trace[0].text = list(str(' ') * y_vals_len)
+        for l in labels_list:
+            if int(l) > -1 and int(l) < total_datasets - 1:
+                all_trace[int(l)][0].text = [str(val) for val in all_trace[int(l)][0].y]
+
+            
     base_line_vals = []
     # Creating base line trace if it was requested 
     if set_base_line != None:
@@ -462,6 +468,8 @@ def main():
     parser.set_defaults(plot_online=False)
     parser.add_argument('-a', '--all_labels', dest='all_labels', action='store_true',
                         help='If passed, will show all labels in graph')
+    parser.add_argument('-l', '--labels', type=str,
+                        help='Adds labels only the traces listed as values from 0 to n-1 seperated by commas')
     parser.set_defaults(all_labels=False)
 
     try:
@@ -481,7 +489,8 @@ def main():
                   args.baseline, 
                   args.y_range_max,
                   args.plot_online,
-                  args.all_labels)
+                  args.all_labels,
+                  args.labels)
 
 if __name__ == '__main__':
     main()
