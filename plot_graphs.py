@@ -365,7 +365,7 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
         for curr_trace in all_trace:
             curr_trace[0].text = list(str(' ') * y_vals_len)
         for l in labels_list:
-            if int(l) > -1 and int(l) < total_datasets - 1:
+            if int(l) > -1 and int(l) < total_datasets:
                 all_trace[int(l)][0].text = [str(val) for val in all_trace[int(l)][0].y]
 
             
