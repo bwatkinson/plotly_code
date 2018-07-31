@@ -180,9 +180,9 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
         line_split = line.split(',')
         if line_split[0].replace('# ','') == 'line':
             # If we are doing a line plot, the x_vals must be ints
-            x_vals_str_line = x_vals_str.split()
-            # Removing tag from end of list
-            x_vals_str_line[len(x_vals_str_line) - 1] = x_vals_str_line[len(x_vals_str_line) - 1].split(',')[0]
+            x_vals_str_line = x_vals_str.split(',')
+            x_vals_str_line = x_vals_str_line[0]
+            x_vals_str_line = x_vals_str_line.split()
             x_vals = [int(s) for s in x_vals_str_line if s.isdigit()]
             all_trace[x].append(go.Scatter(x=x_vals,
                                            name=line_split[len(line_split) - 1],
@@ -199,8 +199,6 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                                             )
                                )
 
-            #if x == 1 or x == 4:
-            #    all_trace[x][0].textposition = 'bottom center'
 
             all_layouts.append(go.Layout(title = '<b>' + line_split[1] + '</b>',
 		                                 titlefont =  chart_title_font, 
@@ -231,8 +229,8 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                 x_vals_str_line[curr_pos] = x_str.strip()
                 curr_pos += 1
             all_trace[x].append(go.Bar(x=x_vals_str_line,
-                                       textposition = 'outside',
-                                       #textposition = 'auto',
+                                       #textposition = 'outside',
+                                       textposition = 'auto',
                                        #textposition = 'inside',
                                        name=line_split[len(line_split) -1],
                                       )
