@@ -188,14 +188,15 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                                            name=line_split[len(line_split) - 1],
                                            line = dict(width = 1,
                                                        dash = 'solid',
-                                                       shape = 'spline'
+                                                       shape = 'spline',
+                                                       smoothing = 0.2
                                                   ),
                                             marker = dict(opacity = 1,
                                                           size = 7,
                                                           line = dict(width = 1.5)
                                                      ),
                                             mode = 'lines+markers+text',
-                                            textposition = 'top center'
+                                            textposition = 'top center',
                                             )
                                )
 
@@ -327,7 +328,7 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
         for curr_trace in all_trace:
             curr_trace[0].text = [str(val) for val in curr_trace[0].y]
     
-    if one_graph == True and all_lables == False:
+    if one_graph == True and all_labels == False:
         # Getting all y values from data traces, so we can just label min and
         # max below
         all_y_vals = []
