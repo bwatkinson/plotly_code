@@ -35,11 +35,26 @@ def is_passes_xdd_data(basedir):
     for file_name in file_names:
         first_file_name = file_name
         break
-    # Checking to see if file name as passes
+    # Checking to see if file name has passes
     if 'passes' in first_file_name:
         return True
     else:
         # Assumed here that the file name contains runs
+        return False
+
+
+def is_num_files(basedir):
+    # Just grabbing the first file to figure out if it is a num_files output
+    first_file_name = ''
+    file_names = glob.glob(basedir + '/' + '*.txt')
+    for file_name in file_names:
+        first_file_name = file_name
+        break
+    # Checking to see if the file name has num_files
+    if 'num_files' in first_file_name:
+        return True
+    else:
+        # Assumed here the file name either contains runs or passes
         return False
 
 
@@ -57,6 +72,18 @@ def get_threads(threads, base_dir):
     for val in reduced_threads:
         bisect.insort(threads, val)
              
+
+# Getting the number of files used per thread
+def get_num_files(num_files, base_dir):
+    file_names = glob.glob(base_dir + '/' + '*.txt')
+    for name in file_names:
+        m = re.search('num_files_[0-9]+', name)
+        if m:
+            num_file_str = m.group(0)
+            m = re.search('[0-9]+', num_file_str)
+            if m and int(m.group(0)) not in num_files:
+                bisect.insort(num_files, int(m.group(0)))
+
 
 # Getting the total number of runs in input files and threads run
 def get_total_num_runs(base_dir):
@@ -145,9 +172,41 @@ def jump_to_zfs_list_input(fp):
     last_pos = fp.tell()
     line = fp.readline()
     while line.find('MOUNTPOINT') == -1:
-        last_pos = fp.tell()
         line = fp.readline()
     return last_pos
+
+def correct_xdd_output(line_list, xdd_file_offset):
+    # Hacky work around to fix extra tab inserted
+    # in XDD output for certain PASS'es. Our only
+    # hope of fixing this error is if the tab appears
+    # In a floating point number...
+    # or TARGET_PASS being split...
+    # or occurs in Bandwidth on line 8...
+    new_line_list = []
+    if xdd_file_offset == 8:
+        curr_offset = 0
+        while len(line_list) != 0:
+            curr_val = line_list.pop(0)
+            if curr_offset == 7:
+                new_line_list.append(curr_val + line_list.pop(0))
+            else:
+                new_line_list.append(curr_val)
+            curr_offset += 1
+    else:
+        while len(line_list) != 0:
+            curr_val = line_list.pop(0)
+            float_missing_dec = re.search('^\d+\.\D?$', curr_val)
+            if curr_val == 'TARGET_P':
+                new_line_list.append(curr_val + line_list.pop(0))
+            elif float_missing_dec:
+                # Found decimal point value missing
+                # values after decimal point, so just
+                # need to combine the values
+                new_line_list.append(curr_val + line_list.pop(0))
+            else:
+                new_line_list.append(curr_val)
+    return new_line_list
+
 
 def write_output_file(output_file_name, queries, threads, data_points, \
                       std_devs, std_errs, chart_titles, y_labels):
@@ -163,7 +222,7 @@ def write_output_file(output_file_name, queries, threads, data_points, \
                 fp.write(str(t) + ' ')
             elif chart_titles[x].split(',')[0] == 'bar':
                 fp.write(str(t) + ' Threads, ')
-        fp.write('\n')
+        fp.write(queries[x] + '\n')
         y_label_split = y_labels[x].split(',')
         # Writing out chart titles
         fp.write('# ')
@@ -187,6 +246,50 @@ def write_output_file(output_file_name, queries, threads, data_points, \
         fp.write('\n')
     fp.close()    
 
+
+
+def write_output_file_num_files(output_file_name, queries, threads, data_points, \
+                                std_devs, std_errs, chart_titles, y_labels, num_files):
+    fp = open(output_file_name, 'w')
+    # Writing out how many data sets there are along with each
+    # datasets corresponding values
+    fp.write(str(len(data_points[0]) * len(queries)) + ' ' + '3\n')
+    for x in xrange(len(queries)):
+        for y in xrange(len(data_points[0])):
+            tag = queries[x] + ' for ' + str(num_files[y]) + ' files'
+            # Writing out the x values
+            fp.write('# x-title,Number of I/O Threads Per File,' + tag + '\n')
+            for t in threads:
+                if chart_titles[x].split(',')[0] == 'line':
+                    if t == threads[len(threads) - 1]:
+                        fp.write(str(t) + ',')
+                    else:
+                        fp.write(str(t) + ' ')
+                elif chart_titles[x].split(',')[0] == 'bar':
+                    fp.write(str(t) + ' Threads, ')
+            fp.write(tag + '\n')
+            y_label_split = y_labels[x].split(',')
+            # Writing out chart titles
+            fp.write('# ')
+            fp.write(chart_titles[x].rstrip() + ',' + tag + '\n')
+            # Writing out the y labels
+            fp.write('# y-title,')
+            fp.write(y_labels[x].rstrip() + ',' + tag + '\n')
+            # Writing out y data values
+            for z in xrange(len(data_points[x][y])):
+                fp.write(str('%.3f' % data_points[x][y][z]) + ' ')
+            fp.write('\n')
+            # Writing out standard deviations
+            fp.write('# STDDEV,' + tag + '\n')
+            for z in xrange(len(std_devs[x][y])):
+                fp.write(str('%.3f' % std_devs[x][y][z]) + ' ')
+            fp.write('\n')
+            # Writing out standard errors
+            fp.write('# STDERR,' + tag + '\n')
+            for z in xrange(len(std_errs[x][y])):
+                fp.write(str('%.3f' % std_errs[x][y][z]) + ' ')
+            fp.write('\n')
+    fp.close()    
 
 
 def get_offsets(base_dir, offsets, queries):
@@ -254,21 +357,34 @@ def get_offsets(base_dir, offsets, queries):
         offsets.append(1)
 
 
-def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
+def get_size_in_mb(file_size):
+    numeric_portion = file_size[:-1]
+    size_factor = file_size[len(file_size) - 1]
+
+    if size_factor == 'K':
+        return float(numeric_portion)/1024
+    elif size_factor == 'M':
+        return float(numeric_portion)
+    elif size_factor == 'G':
+        return float(numeric_portion)*1024
+    else:
+        # Assumed size_factor == 'T'
+        return float(numeric_portion)*(1024**2)
+    
+
+
+# Specific getting_data function for passes input
+def getting_data_runs(base_dir, queries, chart_titles, y_labels, threads, grab):
     offsets = []
     data_points = []
     std_devs = []
     std_errs = []
     run_datapoints = []
-    num_passes = 0
-
-    # If we are using XDD pass data, we need to find total number
-    # of passes
-    if is_passes_xdd_data(base_dir):
-        num_passes = get_total_num_passes(base_dir)
-    else:
-        runs = get_total_num_runs(base_dir)
-
+    runs = 0 
+    
+    # Getting the total number of runs per input test 
+    runs = get_total_num_runs(base_dir)
+    
     # Getting offsets of points of interest
     get_offsets(base_dir, offsets, queries)
     
@@ -278,20 +394,15 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
     std_errs = [[] for l in range(len(queries))]
     
     for t in threads:
-        # For each thread we will get the median, standard
-        # deviations, and standard error for all queries
-        input_file = base_dir + '/'
-        path_split = base_dir.split('/')
-        input_file += path_split[-1]
-        if is_passes_xdd_data(base_dir):
-            input_file += '_passes'
-        else:
-            input_file += '_run_'
+        input_file += '_run_'
+        
         #initializing current runs data sets
         run_datapoints = [[] for l in range(len(queries))]
-        if is_passes_xdd_data(base_dir):
+            
+        for r in range(1,runs+1):
+            # Getting current input based on run #
             current_input = input_file
-            current_input += '_threads_' + str(t) + '.txt'
+            current_input += str(r) + '_threads_' + str(t) + '.txt'
             input_fp = open(current_input, 'r')
             if len(queries) == 1 and queries[0] == 'Compress_Size':
                 # If the only query is Compress_Size we do not need to
@@ -300,99 +411,43 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
             else:
                 # Parsing out XDD normal header info
                 parse_test_case_header(input_fp, queries)
-            # Getting all datapoints
-            for p in xrange(num_passes):
-                line = input_fp.readline()
-                line_list = line.split()
-                # Getting data points of interest for this run
-                for x in xrange(len(queries)):
+            line = input_fp.readline()
+            line_list = line.split()
+            xdd_file_offset = 0
+            # Getting data points of interest for this run
+            for x in xrange(len(queries)):
+                if queries[x] == 'Compress_Size':
                     # If query is Compress_Size, we just need to read to the
                     # end of the file and grab the amount of data
-                    if queries[x] == 'Compress_Size':
-                        if 'MOUNTPOINT' not in line_list:
-                            jump_to_zfs_list_input(input_fp)
-                        line = input_fp.readline()
-                        line_list = line.split()
-                        # Removing size of file from ZFS list output
-                        line_list[offsets[x]] = line_list[offsets[x]][:-1]
-                        run_datapoints[x].append(float(line_list[offsets[x]]))
-                        continue
-                        
-                    new_line_list = []
-                    # Hacky work around to fix extra tab inserted
-                    # in XDD output for certain PASS'es. Our only
-                    # hope of fixing this error is if the tab appears
-                    # In a floating point number...
                     if len(line_list) > 13:
-                        new_line_list = []
-                        while len(line_list) != 0:
-                            curr_val = line_list.pop(0)
-                            float_missing_dec = re.search('^\d+\.\D?$', curr_val)
-                            if float_missing_dec:
-                                # Found decimal point value missing
-                                # values after decimal point, so just
-                                # need to combine the values
-                                new_line_list.append(curr_val + line_list.pop(0))
-                            else:
-                                new_line_list.append(curr_val)
-                        line_list = new_line_list
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    if 'MOUNTPOINT' not in line_list:
+                        jump_to_zfs_list_input(input_fp)
+                    line = input_fp.readline()
+                    line_list = line.split()
+                    # Removing size of file from ZFS list output
+                    line_list[offset[x]] = line_list[offset[x]][:-1]
                     run_datapoints[x].append(float(line_list[offsets[x]]))
-                    
+                    continue
+                elif queries[x] == 'Physical_Bandwidth':
                     # If the query is Physical_Bandwidth, we must also grab
                     # the actual file size at end of file and do the conversion
                     # division
-                    if queries[x] == 'Physical_Bandwidth':
-                        last_pos = jump_to_zfs_list_input(input_fp)
-                        line = input_fp.readline()
-                        line_list = line.split()
-                        # Removing size of file from ZFS list output
-                        line_list[1] = line_list[1][:-1]
-                        run_datapoints[x] = float(line_list[1])*1024/run_datapoints[x][p]
-                        input_fp.seek(last_pos)
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    elapsed_time = line_list[offsets[x]]
+                    last_pos = jump_to_zfs_list_input(input_fp)
+                    line = input_fp.readline()
+                    line_list = line.split()
+                    # Removing size of file from ZFS list output
+                    run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
+                    input_fp.seek(last_pos)
+                else:   
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
+            xdd_file_offset += 1        
             input_fp.close()
-        else:
-            for r in range(1,runs+1):
-                 # Getting current input based on run #
-                current_input = input_file
-                current_input += str(r) + '_threads_' + str(t) + '.txt'
-                input_fp = open(current_input, 'r')
-                if len(queries) == 1 and queries[0] == 'Compress_Size':
-                    # If the only query is Compress_Size we do not need to
-                    # get to actual XDD output just ZFS list output
-                    pass
-                else:
-                    # Parsing out XDD normal header info
-                    parse_test_case_header(input_fp, queries)
-                line = input_fp.readline()
-                line_list = line.split()
-                # Getting data points of interest for this run
-                for x in xrange(len(queries)):
-                    # If query is Compress_Size, we just need to read to the
-                    # end of the file and grab the amount of data
-                    if queries[x] == 'Compress_Size':
-                        if 'MOUNTPOINT' not in line_list:
-                            jump_to_zfs_list_input(input_fp)
-                        line = input_fp.readline()
-                        line_list = line.split()
-                        # Removing size of file from ZFS list output
-                        line_list[offset[x]] = line_list[offset[x]][:-1]
-                        run_datapoints[x].append(float(line_list[offsets[x]]))
-                        continue
-                    
-                    run_datapoints[x].append(float(line_list[offsets[x]]))
-                    
-                    # If the query is Physical_Bandwidth, we must also grab
-                    # the actual file size at end of file and do the conversion
-                    # division
-                    if queries[x] == 'Physical_Bandwidth':
-                        last_pos = jump_to_zfs_list_input(input_fp)
-                        line = input_fp.readline()
-                        line_list = line.split()
-                        # Removing size of file from ZFS list output
-                        line_list[1] = line_list[1][:-1]
-                        run_datapoints[x] = float(line_list[1])*1024/run_datapoints[x][p]
-                        input_fp.seek(last_pos)
-                input_fp.close()
         
         for x in xrange(len(queries)):  
             if grab == 'mean':
@@ -410,10 +465,7 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
             # Getting Standard Deviation for Data Points
             std_devs[x].append(numpy.std(run_datapoints[x]))
             # Getting Standard Error for Data Points
-            if is_passes_xdd_data(base_dir):
-                std_errs[x].append(numpy.std(run_datapoints[x])/(num_passes**0.5))
-            else:
-                std_errs[x].append(numpy.std(run_datapoints[x])/(runs**0.5))
+            std_errs[x].append(numpy.std(run_datapoints[x])/(runs**0.5))
     
     # Writing out all output to output file
     base_dir_list = base_dir.split('/')
@@ -421,6 +473,250 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
     output_file_name += '_data.txt'
     write_output_file(output_file_name, queries, threads, data_points, \
                       std_devs, std_errs, chart_titles, y_labels)
+
+
+
+
+# Specific getting_data function for passes input
+def getting_data_passes(base_dir, queries, chart_titles, y_labels, threads, grab):
+    offsets = []
+    data_points = []
+    std_devs = []
+    std_errs = []
+    run_datapoints = []
+    num_passes = 0
+    
+    # getting number of passes
+    num_passes = get_total_num_passes(base_dir)
+    
+    # Getting offsets of points of interest
+    get_offsets(base_dir, offsets, queries)
+    
+    # Initializing data points, std_devs, std_errs
+    data_points = [[] for l in range(len(queries))]
+    std_devs = [[] for l in range(len(queries))]
+    std_errs = [[] for l in range(len(queries))]
+    
+    for t in threads:
+        # for each thread we will get the median, standard
+        # deviations, and standard error for all queries
+        input_file = base_dir + '/'
+        path_split = base_dir.split('/')
+        input_file += path_split[-1]
+        input_file += '_passes'
+        
+        #initializing current runs data sets
+        run_datapoints = [[] for l in range(len(queries))]
+        
+        current_input = input_file
+        current_input += '_threads_' + str(t) + '.txt'
+        input_fp = open(current_input, 'r')
+        if len(queries) == 1 and queries[0] == 'Compress_Size':
+            # If the only query is Compress_Size we do not need to
+            # get to actual XDD output just ZFS list output
+            pass
+        else:
+            # Parsing out XDD normal header info
+                parse_test_case_header(input_fp, queries)
+        # Getting all datapoints
+        for p in xrange(num_passes):
+            line = input_fp.readline()
+            line_list = line.split()
+            # Getting data points of interest for this run
+            xdd_file_offset = 0
+            for x in xrange(len(queries)):
+                if queries[x] == 'Compress_Size':
+                    # If query is Compress_Size, we just need to read to the
+                    # end of the file and grab the amount of data
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    if 'MOUNTPOINT' not in line_list:
+                        jump_to_zfs_list_input(input_fp)
+                    line = input_fp.readline()
+                    line_list = line.split()
+                    # Removing size of file from ZFS list output
+                    line_list[offsets[x]] = line_list[offsets[x]][:-1]
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
+                    continue
+                elif queries[x] == 'Physical_Bandwidth':
+                    # If the query is Physical_Bandwidth, we must also grab
+                    # the actual file size at end of file and do the conversion
+                    # division
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    elapsed_time = line_list[offsets[x]]
+                    last_pos = jump_to_zfs_list_input(input_fp)
+                    line = input_fp.readline()
+                    line_list = line.split()
+                    run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
+                    input_fp.seek(last_pos)
+                else:        
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
+            xdd_file_offset += 1        
+        input_fp.close()
+        
+        for x in xrange(len(queries)):  
+            if grab == 'mean':
+                # Getting mean of run values
+                data_points[x].append(numpy.mean(run_datapoints[x]))
+            if grab == 'median':
+                # Getting median of run values
+                data_points[x].append(numpy.median(run_datapoints[x]))
+            if grab == 'min':
+                # Getting min of run values
+                data_points[x].append(numpy.min(run_datapoints[x]))
+            if grab == 'max':
+                # Getting max of run values
+                data_points[x].append(numpy.max(run_datapoints[x]))
+            # Getting Standard Deviation for Data Points
+            std_devs[x].append(numpy.std(run_datapoints[x]))
+            # Getting Standard Error for Data Points
+            std_errs[x].append(numpy.std(run_datapoints[x])/(num_passes**0.5))
+    
+    # Writing out all output to output file
+    base_dir_list = base_dir.split('/')
+    output_file_name = base_dir_list[len(base_dir_list) - 1]
+    output_file_name += '_data.txt'
+    write_output_file(output_file_name, queries, threads, data_points, \
+                      std_devs, std_errs, chart_titles, y_labels)
+
+
+
+# Specific getting_data function for num_files input
+def getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, grab):
+    num_files = []
+    offsets = []
+    std_devs = []
+    std_errs = []
+    run_data_points = []
+    input_fp = open('/dev/null','r')
+
+    # Getting the total number of files written in the tests
+    get_num_files(num_files, base_dir)
+    
+    # Getting offsets of points of interest
+    get_offsets(base_dir, offsets, queries)
+   
+    # Initializing data points, std_devs, std_errs
+    data_points = [[] for l in range(len(queries))]
+    std_devs = [[] for l in range(len(queries))]
+    std_errs = [[] for l in range(len(queries))]
+
+    # Now setting up all the lists for the number of files
+    for x in range(len(queries)):
+        for y in xrange(len(num_files)):
+            data_points[x].append([])
+            std_devs[x].append([])
+            std_errs[x].append([])
+
+    # Now accessing is done by data_points[0][0].append()
+    for num_file_offset in xrange(len(num_files)):
+        for t in threads:
+            run_datapoints = [[] for l in xrange(len(queries))]
+            input_fp.close()
+            # for each thread we will get the grab value, standard
+            # deviations, and standard error for all queries
+            input_file = base_dir + '/'
+            path_split = base_dir.split('/')
+            input_file += path_split[-1]
+            input_file += '_passes_threads_' + str(t)
+            input_file += '_num_files_' + str(num_files[num_file_offset]) + '.txt'
+            input_fp = open(input_file, 'r')
+            if len(queries) == 1 and queries[0] == 'Compress_Size':
+                # If the only query is Compress_Size we do not need to
+                # get to actual XDD output just ZFS list output
+                pass
+            else:
+                # Parsing out XDD normal header info
+                parse_test_case_header(input_fp, queries)
+            xdd_file_offset = 0
+            for y in range(num_files[num_file_offset]):
+                line = input_fp.readline()
+                line_list = line.split()
+                # Getting data points of interest for this run
+                for x in xrange(len(queries)):
+                    if queries[x] == 'Compress_Size':
+                        # If query is Compress_Size, we just need to read to the
+                        # end of the file and grab the amount of data
+                        if len(line_list) > 13:
+                            line_list = correct_xdd_output(line_list, xdd_file_offset)
+                        if 'MOUNTPOINT' not in line_list:
+                            last_pos = jump_to_zfs_list_input(input_fp)
+                            line = input_fp.readline()
+                            line_list = line.split()
+                            # Removing size of file from ZFS list output
+                            line_list[offsets[x]] = line_list[offsets[x]][:-1]
+                            run_datapoints[x].append(float(line_list[offsets[x]]))
+                            input_fp.seek(last_pos)
+                            continue
+                    elif queries[x] == 'Physical_Bandwidth':
+                        # If the query is Physical_Bandwidth, we must also grab
+                        # the actual file size at end of file and do the conversion
+                        # division
+                        if len(line_list) > 13:
+                            line_list = correct_xdd_output(line_list, xdd_file_offset)
+                        elapsed_time = line_list[offsets[x]]
+                        last_pos = jump_to_zfs_list_input(input_fp)
+                        line = input_fp.readline()
+                        line_list = line.split()
+                        run_datapoints[x].append(get_size_in_mb(line_list[1])/float(elapsed_time))
+                        input_fp.seek(last_pos)
+                    else:    
+                        new_line_list = []
+                        # Hacky work around to fix extra tab inserted
+                        # in XDD output for certain PASS'es. Our only
+                        # hope of fixing this error is if the tab appears
+                        # In a floating point number...
+                        # Also need to address TARGET_PASS being split...
+                        if len(line_list) > 13:
+                            line_list = correct_xdd_output(line_list, xdd_file_offset)
+                        run_datapoints[x].append(float(line_list[offsets[x]]))
+                xdd_file_offset += 1
+
+            for x in xrange(len(queries)):  
+                if grab == 'mean':
+                    # Getting mean of run values
+                    data_points[x][num_file_offset].append(numpy.mean(run_datapoints[x]))
+                if grab == 'median':
+                    # Getting median of run values
+                    data_points[x][num_file_offset].append(numpy.median(run_datapoints[x]))
+                if grab == 'min':
+                    # Getting min of run values
+                    data_points[x][num_file_offset].append(numpy.min(run_datapoints[x]))
+                if grab == 'max':
+                    # Getting max of run values
+                    data_points[x][num_file_offset].append(numpy.max(run_datapoints[x]))
+                # Getting Standard Deviation for Data Points
+                std_devs[x][num_file_offset].append(numpy.std(run_datapoints[x]))
+                # Getting Standard Error for Data Points
+                std_errs[x][num_file_offset].append(numpy.std(run_datapoints[x])/(num_files[num_file_offset]**0.5))
+
+    # Writing out all output to output file
+    base_dir_list = base_dir.split('/')
+    output_file_name = base_dir_list[len(base_dir_list) - 1]
+    output_file_name += '_data.txt'
+    write_output_file_num_files(output_file_name, queries, threads, data_points, \
+                                std_devs, std_errs, chart_titles, y_labels, num_files)
+
+
+
+def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
+    offsets = []
+    data_points = []
+    std_devs = []
+    std_errs = []
+    run_datapoints = []
+    num_passes = 0
+
+    if is_num_files(base_dir):
+        getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, grab) 
+    elif is_passes_xdd_data(base_dir):
+        getting_data_passes(base_dir, queries, chart_titles, y_labels, threads, grab)
+    else:
+        getting_data_runs(base_dir, queries, chart_titles, y_labels, threads, grab)
+
 
 
 def create_bulk_plot_files(plot_dir, xdd_dir, grab):    
@@ -434,13 +730,13 @@ def create_bulk_plot_files(plot_dir, xdd_dir, grab):
 
     # Grabbing all plot files from plot directory
     plot_file_names = glob.glob(plot_dir + '/' + '*.plot')
-
+    
     # Generating all xdd data directory paths
     for plot_file_name in plot_file_names:
         base_dir = plot_file_name.split('/')
         base_dir_str = base_dir[len(base_dir) - 1]
         xdd_data_dirs.append(xdd_dir + '/' + base_dir_str.strip('.plot'))
-
+    
     # Getting the all the threads used, should be same for all.
     # Because of this, just using first directory
     get_threads(threads, xdd_data_dirs[0])
