@@ -323,10 +323,11 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
     # Taking care of any excludes requested
     update_graphs_with_excludes(all_trace, excludes)
 
-    if all_labels:
+    if all_labels or one_graph == False:
         for curr_trace in all_trace:
             curr_trace[0].text = [str(val) for val in curr_trace[0].y]
-    else:
+    
+    if one_graph == True and all_lables == False:
         # Getting all y values from data traces, so we can just label min and
         # max below
         all_y_vals = []
