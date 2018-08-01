@@ -122,17 +122,14 @@ def combine_files(input_data_files, point_of_interest, data_label_file):
                             curr_pos += 1
                         x_vals_str_new = ''
                         for x_values in x_vals_str_line:
-                            if x_values != x_vals_str_line[len(x_vals_str_line) - 1]:
-                                x_vals_str_new += x_values + ', '
-                            else:
-                                x_vals_str_new += x_values + ','
+                            x_vals_str_new += x_values + ','
                         # Adding new label to the end
                         x_vals_str_new += data_labels[label_offset]
                         x_vals.append(x_vals_str_new)
                     elif chart_title.split(',')[0] == 'line':
-                        x_vals_str_line = line.split()
-                        # Removing old from end of list
-                        x_vals_str_line[len(x_vals_str_line) - 1] = x_vals_str_line[len(x_vals_str_line) - 1].split(',')[0]
+                        x_vals_str_line = line.split(',')
+                        x_vals_str_line = x_vals_str_line[0]
+                        x_vals_str_line = x_vals_str_line.split()
                         x_vals_str_new = ''
                         for x_values in x_vals_str_line:
                             if x_values != x_vals_str_line[len(x_vals_str_line) - 1]:
