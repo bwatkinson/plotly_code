@@ -7,7 +7,9 @@ import numpy
 
 acceptable_queries = ['Pass', 'Target', 'Queue', 'Bytes_Xfered', 'Ops'
                       'Elapsed', 'Bandwidth', 'IOPS', 'Latency', 'Pct_CPU',
-                      'Xfer_Size', 'Compress_Size', 'Physical_Bandwidth']
+                      'Xfer_Size', 'Compress_Size', 'Physical_Bandwidth',
+                      'Combined_Bandwidth', 'Combined_CPU', 
+                      'Combined_Physical_Bandwidth']
 
 def get_total_num_passes(basedir):
     num_passes = 0
@@ -143,6 +145,7 @@ def parse_input_file(input_file, queries, chart_titles, y_labels):
         # Nothing to do, so don't worry about it
         pass
 
+
     # Now need to place Compression Size at the end of the list
     # if it is a query
     compress_size_index = -1
@@ -161,11 +164,24 @@ def parse_input_file(input_file, queries, chart_titles, y_labels):
 
 
 def parse_test_case_header(fp, queries):
+    # Need to make sure that Combined searches are not the only thing
+    # we are searching for. If so we do not need to parse here.
+    ignore_list = ['Combined_Bandwidth','Combined_CPU','Combined_Physical_Bandwidth']
+    if set(ignore_list) == set(queries):
+        return
+    elif len(queries) == 1 and 'Combined' in queries[0]:
+        return
+
+    query_offset = 0
+    while 'Combined' in queries[query_offset]:
+        query_offset += 1
+        
     #looking for DD command output, so will skip everything else
     line = fp.readline()
-    while line.find(queries[0]) == -1:
+    while line.find(queries[query_offset]) == -1:
         line = fp.readline()
     fp.readline()
+
 
 def jump_to_zfs_list_input(fp):
     #looking for MOUNTPOINT
@@ -175,15 +191,35 @@ def jump_to_zfs_list_input(fp):
         line = fp.readline()
     return last_pos
 
+
+def jump_to_xdd_combined_input(input_fp):
+    #looking for 
+    last_pos = input_fp.tell()
+    line = input_fp.readline()
+    while line.find('COMBINED') == -1:
+        line = input_fp.readline()
+        line_list = line.split()
+    return [last_pos, line_list]
+
+
 def correct_xdd_output(line_list, xdd_file_offset):
     # Hacky work around to fix extra tab inserted
     # in XDD output for certain PASS'es. Our only
     # hope of fixing this error is if the tab appears
     # In a floating point number...
-    # or TARGET_PASS being split...
+    # or TARGET_PASS/TARGET_AVERAGE being split...
     # or occurs in Bandwidth on line 8...
     new_line_list = []
     if xdd_file_offset == 8:
+        curr_offset = 0
+        while len(line_list) != 0:
+            curr_val = line_list.pop(0)
+            if curr_offset == 7:
+                new_line_list.append(curr_val + line_list.pop(0))
+            else:
+                new_line_list.append(curr_val)
+            curr_offset += 1
+    elif 'COMBINED' in line_list:
         curr_offset = 0
         while len(line_list) != 0:
             curr_val = line_list.pop(0)
@@ -196,7 +232,7 @@ def correct_xdd_output(line_list, xdd_file_offset):
         while len(line_list) != 0:
             curr_val = line_list.pop(0)
             float_missing_dec = re.search('^\d+\.\D?$', curr_val)
-            if curr_val == 'TARGET_P':
+            if curr_val == 'TARGET_P' or curr_val == 'TARGET_A':
                 new_line_list.append(curr_val + line_list.pop(0))
             elif float_missing_dec:
                 # Found decimal point value missing
@@ -248,8 +284,8 @@ def write_output_file(output_file_name, queries, threads, data_points, \
 
 
 
-def write_output_file_num_files(output_file_name, queries, threads, data_points, \
-                                std_devs, std_errs, chart_titles, y_labels, num_files):
+def write_output_file_num_files_for_threads(output_file_name, queries, threads, data_points, \
+                                            std_devs, std_errs, chart_titles, y_labels, num_files):
     fp = open(output_file_name, 'w')
     # Writing out how many data sets there are along with each
     # datasets corresponding values
@@ -292,6 +328,53 @@ def write_output_file_num_files(output_file_name, queries, threads, data_points,
     fp.close()    
 
 
+
+def write_output_file_num_files_for_files(output_file_name, queries, threads, data_points, \
+                                          std_devs, std_errs, chart_titles, y_labels, num_files):
+    
+    fp = open(output_file_name, 'w')
+    # Writing out how many data sets there are along with each
+    # datasets corresponding values
+    fp.write(str(len(threads) * len(queries)) + ' ' + '3\n')
+    for x in xrange(len(queries)):
+        for y in xrange(len(data_points[0][0])):
+            tag = queries[x] + ' for ' + str(threads[y]) + ' threads'
+            # Writing out the x values
+            fp.write('# x-title,Number of Target Files,' + tag + '\n')
+            for n in num_files:
+                if chart_titles[x].split(',')[0] == 'line':
+                    if n == num_files[len(num_files) - 1]:
+                        fp.write(str(n) + ',')
+                    else:
+                        fp.write(str(n) + ' ')
+                elif chart_titles[x].split(',')[0] == 'bar':
+                    fp.write(str(n) + ' Targets, ')
+            fp.write(tag + '\n')
+            y_label_split = y_labels[x].split(',')
+            # Writing out chart titles
+            fp.write('# ')
+            fp.write(chart_titles[x].rstrip() + ',' + tag + '\n')
+            # Writing out the y labels
+            fp.write('# y-title,')
+            fp.write(y_labels[x].rstrip() + ',' + tag + '\n')
+            # Writing out y data values
+            for z in xrange(len(data_points[x])):
+                fp.write(str('%.3f' % data_points[x][z][y]) + ' ')
+            fp.write('\n')
+            # Writing out standard deviations
+            fp.write('# STDDEV,' + tag + '\n')
+            for z in xrange(len(std_devs[x])):
+                fp.write(str('%.3f' % std_devs[x][z][y]) + ' ')
+            fp.write('\n')
+            # Writing out standard errors
+            fp.write('# STDERR,' + tag + '\n')
+            for z in xrange(len(std_errs[x])):
+                fp.write(str('%.3f' % std_errs[x][z][y]) + ' ')
+            fp.write('\n')
+    fp.close()    
+
+
+
 def get_offsets(base_dir, offsets, queries):
     zfs_list_ouput_present = False
     set_compress_size_offset = False
@@ -304,7 +387,7 @@ def get_offsets(base_dir, offsets, queries):
     # is desired, we first must make sure that the output file
     # has the proper ZFS list output. If it doesn't we will
     # just bail
-    if 'Physical_Bandwidth' in queries or 'Compress_Size' in queries:
+    if 'Physical_Bandwidth' in queries or 'Compress_Size' in queries or 'Combined_Physical_Bandwidth':
         with open(file_names[0]) as fp:
             line = fp.readline()
             while line:
@@ -317,10 +400,11 @@ def get_offsets(base_dir, offsets, queries):
             print 'contain the output from zfs list... Exiting'
             exit(1)
 
+    copy_queries = list(queries)
+    
     # If the query is Physical_Bandwidth, need to update the
     # query value to search for to Elapsed. We are merely
     # getting the total time to transfer data
-    copy_queries = list(queries)
     physical_index = -1
     try:
         physical_index = copy_queries.index('Physical_Bandwidth')
@@ -335,6 +419,37 @@ def get_offsets(base_dir, offsets, queries):
     try:
         compress_size_index = copy_queries.index('Compress_Size')
         set_compress_size_offset = True
+    except:
+        # Nothing to do, so don't worry about it
+        pass
+
+    # if the query is Combined_Bandwidth, need to update the
+    # query value to search for Bandwidth
+    combined_bandwidth_index = -1
+    try:
+        combined_bandwidth_index = copy_queries.index('Combined_Bandwidth')
+        copy_queries[combined_bandwidth_index] = 'Bandwidth'
+    except:
+        # Nothing to do, so don't worry about it
+        pass
+
+    # if query is Combined_CPU, need to update the query value
+    # to search for Pct_CPU
+    combined_cpu_index = -1
+    try:
+        combined_cpu_index = copy_queries.index('Combined_CPU')
+        copy_queries[combined_cpu_index] = 'Pct_CPU'
+    except:
+        # Nothing to do, so dont worry about it
+        pass
+
+    # if the query is Combined_Physical_Bandwidth, need to update
+    # the query value to search for Elapsed. We are merely
+    # getting the total combined time to transfer data
+    combined_physical_index = -1
+    try:
+        combined_physical_index = copy_queries('Combined_Physical_Bandwidth')
+        copy_queries[combined_physical_index] = 'Elapsed'  
     except:
         # Nothing to do, so don't worry about it
         pass
@@ -426,7 +541,7 @@ def getting_data_runs(base_dir, queries, chart_titles, y_labels, threads, grab):
                     line = input_fp.readline()
                     line_list = line.split()
                     # Removing size of file from ZFS list output
-                    line_list[offset[x]] = line_list[offset[x]][:-1]
+                    line_list[offsets[x]] = line_list[offsets[x]][:-1]
                     run_datapoints[x].append(float(line_list[offsets[x]]))
                     continue
                 elif queries[x] == 'Physical_Bandwidth':
@@ -441,6 +556,41 @@ def getting_data_runs(base_dir, queries, chart_titles, y_labels, threads, grab):
                     line_list = line.split()
                     # Removing size of file from ZFS list output
                     run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
+                    input_fp.seek(last_pos)
+                elif queries[x] == 'Combined_Physical_Bandwidth':
+                    # fp_offset_line_list = [last_pos, line_list]
+                    fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    elapsed_time = line_list[offset[x]]
+                    jump_to_zfs_list_input(input_fp)
+                    line = line_fp.readline()
+                    line_list = line.split()
+                    # Removing size of file from ZFS list output
+                    run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
+                    input_fp.seek(fp_offset_line_list[0])
+                    line_list = fp_offset_line_list[1]
+                elif queries[x] == 'Combined_Bandwidth':
+                    # If the query is Combined_Bandwidth, we just need to skip to
+                    # the combined XDD output line
+                    # fp_offset_line_list = [last_pos, line_list]
+                    fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                    last_pos = fp_offset_line_list[0]
+                    line_list = fp_offset_line_list[1]
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
+                    input_fp.seek(last_pos)
+                elif queries[x] == 'Combined_CPU':
+                    # If the query is Combined_CPU, we just need to skip to
+                    # the combined XDD output line
+                    # fp_offset_line_list = [last_pos, line_list]
+                    fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                    last_pos = fp_offset_line_list[0]
+                    line_list = fp_offset_line_list[1]
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
                     input_fp.seek(last_pos)
                 else:   
                     if len(line_list) > 13:
@@ -517,7 +667,7 @@ def getting_data_passes(base_dir, queries, chart_titles, y_labels, threads, grab
             pass
         else:
             # Parsing out XDD normal header info
-                parse_test_case_header(input_fp, queries)
+            parse_test_case_header(input_fp, queries)
         # Getting all datapoints
         for p in xrange(num_passes):
             line = input_fp.readline()
@@ -549,6 +699,41 @@ def getting_data_passes(base_dir, queries, chart_titles, y_labels, threads, grab
                     line = input_fp.readline()
                     line_list = line.split()
                     run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
+                    input_fp.seek(last_pos)
+                elif queries[x] == 'Combined_Physical_Bandwidth':
+                    # fp_offset_line_list = [last_pos, line_list]
+                    fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    elapsed_time = line_list[offset[x]]
+                    jump_to_zfs_list_input(input_fp)
+                    line = line_fp.readline()
+                    line_list = line.split()
+                    # Removing size of file from ZFS list output
+                    run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
+                    input_fp.seek(fp_offset_line_list[0])
+                    line_list = fp_offset_line_list[1]
+                elif queries[x] == 'Combined_Bandwidth':
+                    # If the query is Combined_Bandwidth, we just need to skip to
+                    # the combined XDD output line
+                    # fp_offset_line_list = [last_pos, line_list]
+                    fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                    last_pos = fp_offset_line_list[0]
+                    line_list = fp_offset_line_list[1]
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
+                    input_fp.seek(last_pos)
+                elif queries[x] == 'Combined_CPU':
+                    # If the query is Combined_CPU, we just need to skip to
+                    # the combined XDD output line
+                    # fp_offset_line_list = [last_pos, line_list]
+                    fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                    last_pos = fp_offset_line_list[0]
+                    line_list = fp_offset_line_list[1]
+                    if len(line_list) > 13:
+                        line_list = correct_xdd_output(line_list, xdd_file_offset)
+                    run_datapoints[x].append(float(line_list[offsets[x]]))
                     input_fp.seek(last_pos)
                 else:        
                     if len(line_list) > 13:
@@ -585,7 +770,7 @@ def getting_data_passes(base_dir, queries, chart_titles, y_labels, threads, grab
 
 
 # Specific getting_data function for num_files input
-def getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, grab):
+def getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, grab, xval):
     num_files = []
     offsets = []
     std_devs = []
@@ -631,6 +816,7 @@ def getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, g
             else:
                 # Parsing out XDD normal header info
                 parse_test_case_header(input_fp, queries)
+            
             xdd_file_offset = 0
             for y in range(num_files[num_file_offset]):
                 line = input_fp.readline()
@@ -663,6 +849,41 @@ def getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, g
                         line_list = line.split()
                         run_datapoints[x].append(get_size_in_mb(line_list[1])/float(elapsed_time))
                         input_fp.seek(last_pos)
+                    elif queries[x] == 'Combined_Physical_Bandwidth':
+                        # fp_offset_line_list = [last_pos, line_list]
+                        fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                        if len(line_list) > 13:
+                            line_list = correct_xdd_output(line_list, xdd_file_offset)
+                        elapsed_time = line_list[offset[x]]
+                        jump_to_zfs_list_input(input_fp)
+                        line = line_fp.readline()
+                        line_list = line.split()
+                        # Removing size of file from ZFS list output
+                        run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
+                        input_fp.seek(fp_offset_line_list[0])
+                        line_list = fp_offset_line_list[1]
+                    elif queries[x] == 'Combined_Bandwidth':
+                        # If the query is Combined_Bandwidth, we just need to skip to
+                        # the combined XDD output line
+                        # fp_offset_line_list = [last_pos, line_list]
+                        fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                        last_pos = fp_offset_line_list[0]
+                        line_list = fp_offset_line_list[1]
+                        if len(line_list) > 13:
+                            line_list = correct_xdd_output(line_list, xdd_file_offset)
+                        run_datapoints[x].append(float(line_list[offsets[x]]))
+                        input_fp.seek(last_pos)
+                    elif queries[x] == 'Combined_CPU':
+                        # If the query is Combined_CPU, we just need to skip to
+                        # the combined XDD output line
+                        # fp_offset_line_list = [last_pos, line_list]
+                        fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
+                        last_pos = fp_offset_line_list[0]
+                        line_list = fp_offset_line_list[1]
+                        if len(line_list) > 13:
+                            line_list = correct_xdd_output(line_list, xdd_file_offset)
+                        run_datapoints[x].append(float(line_list[offsets[x]]))
+                        input_fp.seek(last_pos)
                     else:    
                         new_line_list = []
                         # Hacky work around to fix extra tab inserted
@@ -692,17 +913,27 @@ def getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, g
                 std_devs[x][num_file_offset].append(numpy.std(run_datapoints[x]))
                 # Getting Standard Error for Data Points
                 std_errs[x][num_file_offset].append(numpy.std(run_datapoints[x])/(num_files[num_file_offset]**0.5))
+            
+            input_fp.close()
 
     # Writing out all output to output file
     base_dir_list = base_dir.split('/')
     output_file_name = base_dir_list[len(base_dir_list) - 1]
     output_file_name += '_data.txt'
-    write_output_file_num_files(output_file_name, queries, threads, data_points, \
-                                std_devs, std_errs, chart_titles, y_labels, num_files)
+    if xval != None:
+        if xval == 'threads':
+            write_output_file_num_files_for_threads(output_file_name, queries, threads, data_points, \
+                                                    std_devs, std_errs, chart_titles, y_labels, num_files)
+        elif xval == 'files':
+            write_output_file_num_files_for_files(output_file_name, queries, threads, data_points, \
+                                                  std_devs, std_errs, chart_titles, y_labels, num_files)
+    else:
+        # Default is x-values are the number of I/O threads
+        write_output_file_num_files_for_threads(output_file_name, queries, threads, data_points, \
+                                                std_devs, std_errs, chart_titles, y_labels, num_files)
 
 
-
-def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
+def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab, xval):
     offsets = []
     data_points = []
     std_devs = []
@@ -711,7 +942,7 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
     num_passes = 0
 
     if is_num_files(base_dir):
-        getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, grab) 
+        getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, grab, xval) 
     elif is_passes_xdd_data(base_dir):
         getting_data_passes(base_dir, queries, chart_titles, y_labels, threads, grab)
     else:
@@ -719,7 +950,7 @@ def getting_data(base_dir, queries, chart_titles, y_labels, threads, grab):
 
 
 
-def create_bulk_plot_files(plot_dir, xdd_dir, grab):    
+def create_bulk_plot_files(plot_dir, xdd_dir, grab, xval):    
     total_runs = 0
     threads = []
     chart_titles = []
@@ -748,7 +979,8 @@ def create_bulk_plot_files(plot_dir, xdd_dir, grab):
                      chart_titles, 
                      y_labels, 
                      threads,
-                     grab)
+                     grab,
+                     xval)
         queries = []
         chart_titles = []
         y_labels = []
@@ -772,6 +1004,8 @@ def main():
                          help='Do bulk plot operation, either this or -d and -i are required (-b plot_file_dir,xdd_data_dir)')
     parser.add_argument('-g', '--grab', type=str,
                          help='Value to grab can be (mean, median, max, min), median by default')
+    parser.add_argument('-x', '--xval', type=str,
+                         help='Can define what value to use for x-values valid options are (threads,files)')
     
     # Getting Command Line Arguements
     args = parser.parse_args()
@@ -795,11 +1029,19 @@ def main():
             parser.print_help()
             sys.exit(0)
     
+    # Checking to make sure that if the x values are specified that it is set
+    # to threads or files
+    if args.xval is not None:
+        if args.xval != 'threads' and args.xval != 'files':
+            print 'The only allowed x-vals are threads or files'
+            parser.print_help()
+            sys.exit(0)
+
     if args.bulk is not None:
         bulk_list = args.bulk.split(',')
         plot_dir = bulk_list[0].rstrip('/')
         xdd_dir = bulk_list[1].rstrip('/')
-        create_bulk_plot_files(plot_dir, xdd_dir, grab)
+        create_bulk_plot_files(plot_dir, xdd_dir, grab, args.xval)
     else:
         dir_path = args.directory.rstrip('/')
         get_threads(threads, dir_path)
@@ -809,7 +1051,8 @@ def main():
                      chart_titles, 
                      y_labels, 
                      threads,
-                     grab) 
+                     grab,
+                     args.xval) 
 
 if __name__ == "__main__":
     main()
