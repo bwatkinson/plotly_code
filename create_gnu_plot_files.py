@@ -216,11 +216,22 @@ def create_output_files(input_file, baseline, y_range_max,
     line = fp.readline()
     # Now just reading till the end of the file
     while line:
+        curr_x_vals = []
         line_split = line.split(',')
         if 'x-title' in line_split[0]:
             x_labels.append(line_split[1])
             line = fp.readline()
             line_split = line.split(',')[0].split()
+            if 'Threads' in line_split or 'Targets' in line_split:
+                # We are dealing with a bar graph, so we just need
+                # to update the values to be ints
+                line_split = line.split(',')
+                for x in line_split:
+                    x_vals_split = x.split()
+                    for y in x_vals_split:
+                        if y.isdigit():
+                            curr_x_vals.append(y)
+                line_split = curr_x_vals
             x_vals.append([int(s) for s in line_split if s.isdigit()])
             line = fp.readline()
         elif 'y-title' in line_split[0]:
@@ -248,7 +259,6 @@ def create_output_files(input_file, baseline, y_range_max,
             # Unrecognized label just skipping
             line = fp.readline()
     
-
     if not one_plot:
         # Will generate gnu files for every value
         for x in xrange(len(x_vals)):
