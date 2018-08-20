@@ -173,9 +173,14 @@ def parse_test_case_header(fp, queries):
         return
 
     query_offset = 0
-    while 'Combined' in queries[query_offset]:
+    while 'Combined' in queries[query_offset] and query_offset < len(queries) - 1:
         query_offset += 1
-        
+    
+    if query_offset == 1:
+        # All queries are for Combined data values, so just dont need
+        # to parse the header
+        return
+
     #looking for DD command output, so will skip everything else
     line = fp.readline()
     while line.find(queries[query_offset]) == -1:
@@ -448,7 +453,7 @@ def get_offsets(base_dir, offsets, queries):
     # getting the total combined time to transfer data
     combined_physical_index = -1
     try:
-        combined_physical_index = copy_queries('Combined_Physical_Bandwidth')
+        combined_physical_index = copy_queries.index('Combined_Physical_Bandwidth')
         copy_queries[combined_physical_index] = 'Elapsed'  
     except:
         # Nothing to do, so don't worry about it
@@ -562,9 +567,9 @@ def getting_data_runs(base_dir, queries, chart_titles, y_labels, threads, grab):
                     fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
                     if len(line_list) > 13:
                         line_list = correct_xdd_output(line_list, xdd_file_offset)
-                    elapsed_time = line_list[offset[x]]
+                    elapsed_time = line_list[offsets[x]]
                     jump_to_zfs_list_input(input_fp)
-                    line = line_fp.readline()
+                    line = input_fp.readline()
                     line_list = line.split()
                     # Removing size of file from ZFS list output
                     run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
@@ -705,9 +710,9 @@ def getting_data_passes(base_dir, queries, chart_titles, y_labels, threads, grab
                     fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
                     if len(line_list) > 13:
                         line_list = correct_xdd_output(line_list, xdd_file_offset)
-                    elapsed_time = line_list[offset[x]]
+                    elapsed_time = line_list[offsets[x]]
                     jump_to_zfs_list_input(input_fp)
-                    line = line_fp.readline()
+                    line = input_fp.readline()
                     line_list = line.split()
                     # Removing size of file from ZFS list output
                     run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
@@ -854,9 +859,9 @@ def getting_data_num_files(base_dir, queries, chart_titles, y_labels, threads, g
                         fp_offset_line_list = jump_to_xdd_combined_input(input_fp)
                         if len(line_list) > 13:
                             line_list = correct_xdd_output(line_list, xdd_file_offset)
-                        elapsed_time = line_list[offset[x]]
+                        elapsed_time = line_list[offsets[x]]
                         jump_to_zfs_list_input(input_fp)
-                        line = line_fp.readline()
+                        line = input_fp.readline()
                         line_list = line.split()
                         # Removing size of file from ZFS list output
                         run_datapoints[x] = get_size_in_mb(line_list[1])/float(elapsed_time)
