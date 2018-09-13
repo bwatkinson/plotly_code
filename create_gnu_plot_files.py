@@ -11,11 +11,15 @@ def is_float(x):
 
 
 
-def write_gnu_output_data(x_vals, y_vals, data_file_num):
+def write_gnu_output_data(x_vals, y_vals, data_file_num, output_name):
+    file_name='gnu_plot_data'
+    if output_name != None:
+        file_name=output_name
+    
     try:
-        fp = open('gnu_plot_data' + str(data_file_num) + '.dat', 'w')
+        fp = open(file_name + str(data_file_num) + '.dat', 'w')
     except:
-        print 'Could not open, gnu_plot_data' + str(data_file_num) + '.dat...'
+        print 'Could not open, ' + file_name + str(data_file_num) + '.dat...'
         exit(1)
 
     for x in xrange(len(x_vals[0])):
@@ -31,11 +35,16 @@ def write_gnu_output_data(x_vals, y_vals, data_file_num):
 
 def write_gnu_output(chart_title, chart_type, x_label, y_label, legend_val, x_vals, 
                      y_vals, std_dev, std_err, x_max, y_max, y_min, data_file_num, baseline,
-                     all_labels, labels):
+                     all_labels, labels, output_name):
+    file_name='gnu_plot'
+    if output_name != None:
+        file_name=output_name
+   
+    
     try:
-        fp = open('gnu_plot' + str(data_file_num) + '.plt', 'w')
+        fp = open(file_name + str(data_file_num) + '.plt', 'w')
     except:
-        print 'Could not open, gnu_plot' + str(data_file_num) + '.plt...'
+        print 'Could not open, ' + file_name + str(data_file_num) + '.plt...'
         exit(1)
     
     base_line_vals = []
@@ -43,7 +52,7 @@ def write_gnu_output(chart_title, chart_type, x_label, y_label, legend_val, x_va
     
     fp.write('#!/usr/bin/env gnuplot\n\n')
     fp.write('# Terminal\n')
-    fp.write('set terminal pngcairo enhanced size 640,480 font \"Helvetica,16\"\n\n')
+    fp.write('set terminal pngcairo enhanced size 840,680 font \"Helvetica,16\"\n\n')
     fp.write('## Setup a pretty grid\n')
     fp.write('set style line 11 lc rgb \"#404040\" lt 1\n')
     fp.write('set border 3 back ls 11\n')
@@ -51,17 +60,20 @@ def write_gnu_output(chart_title, chart_type, x_label, y_label, legend_val, x_va
     fp.write('set style line 12 lc rgb \"#404040\" lt 0 lw 0.5\n')
     fp.write('set grid back ls 12\n\n')
     fp.write('## Line styles\n')
-    fp.write('# Baseline Line style\n')
-    fp.write('set style line 1 lt 3 dt 2 lw 3 lc rgb \"#000000\"\n')
+    fp.write('# Baseline Line style (black)\n')
+    fp.write('set style line 1 lt 3 dt 2 lw 1 lc rgb \"#000000\"\n')
     fp.write('# All Other Line Styles\n')
-    fp.write('set style line 2 lt 2 lw 3 pt 1 lc rgb \"#ece2f0\"\n')
-    fp.write('set style line 3 lt 2 lw 3 pt 2 lc rgb \"#d0d1e6\"\n')
-    fp.write('set style line 4 lt 2 lw 3 pt 3 lc rgb \"#a6bddb\"\n')
-    fp.write('set style line 5 lt 2 lw 3 pt 4 lc rgb \"#67a9cf\"\n')
-    fp.write('set style line 6 lt 2 lw 3 pt 5 lc rgb \"#3690c0\"\n')
-    fp.write('set style line 7 lt 2 lw 3 pt 7 lc rgb \"#02818a\"\n')
-    fp.write('set style line 8 lt 2 lw 3 pt 11 lc rgb \"#016c59\"\n')
-    fp.write('set style line 9 lt 2 lw 3 pt 13 lc rgb \"#014636\"\n\n')
+    fp.write('# No Comp (magenta)\n')
+    fp.write('set style line 2 lt 2 lw 1 pt 1 lc rgb \"#ff00ff\"\n')
+    fp.write('# Gzip (darkorange,gold)(\n')
+    fp.write('set style line 3 lt 2 lw 1 pt 2 lc rgb \"#ff8c00\"\n')
+    fp.write('set style line 4 lt 2 lw 1 pt 3 lc rgb \"#ffd700\"\n')
+    fp.write('# LZ4 (green,palegreen)\n')
+    fp.write('set style line 5 lt 2 lw 1 pt 4 lc rgb \"#008000\"\n')
+    fp.write('set style line 6 lt 2 lw 1 pt 5 lc rgb \"#98fb98\"\n')
+    fp.write('# LZJB (blue,skyblue)\n')
+    fp.write('set style line 7 lt 2 lw 1 pt 6 lc rgb \"#0000ff\"\n')
+    fp.write('set style line 8 lt 2 lw 1 pt 7 lc rgb \"#87ceeb\"\n')
     #fp.write('## Setting label to annotate ZFS Settings\n')
     #fp.write('set label 1 at ' + str(median_x) + ',' + str(y_max) + '\n')
     #fp.write('set label 1 \"Put text here\"\n\n')
@@ -75,8 +87,13 @@ def write_gnu_output(chart_title, chart_type, x_label, y_label, legend_val, x_va
     fp.write('set title \"' + chart_title[0] + '\"\n')
     fp.write('set xlabel \"' + x_label[0] + '"\n')
     fp.write('set ylabel \"' + y_label[0] + '"\n')
-    fp.write('set yrange[0:' + str(y_max + 100) + ']\n')
-    fp.write('set xrange[-1:' + str(int(x_max) + 1) + ']\n')
+
+    if chart_type[0] == 'bar':
+        fp.write('set yrange[0:' + str(y_max + 25) + ']\n')
+    elif chart_type[0] == 'line':
+        fp.write('set yrange[0:' + str(y_max + 100) + ']\n')
+        fp.write('set xrange[-1:' + str(int(x_max) + 1) + ']\n')
+    
     # Setting up line style for baseline
     if baseline != None:
         base_line_vals = baseline.split(',')
@@ -100,29 +117,35 @@ def write_gnu_output(chart_title, chart_type, x_label, y_label, legend_val, x_va
         fp.write(')\n')
     elif chart_type[0] == 'bar':
         # If this is a bar graph, we write this to the header
-        fp.write('set style histogram clustered gap 1')
-        fp.write('set style data histogram')
-        fp.write('set style fill solid')
-        fp.write('set boxwidth 1.0')
+        fp.write('set style histogram clustered gap 1\n')
+        fp.write('set style data histogram\n')
+        fp.write('set style fill solid\n')
+        fp.write('set boxwidth 1.0\n')
 
+    
+    barchart_ls_offset = 3
     # Now just going to write out plot line    
     for x in xrange(len(x_vals)):
         if chart_type[0] == 'line':
             if x == 0:
                 # Only on the first line do we need to put plot command
-                fp.write('plot \"gnu_plot_data' + str(data_file_num) + '.dat\" using 1:'
-                         + str(x + 2) + ' title \"' + legend_val[x] + '\" with lp,\\\n')
+                fp.write('plot \"' + file_name + str(data_file_num) + '.dat\" using 1:'
+                         + str(x + 2) + ' title \"' + legend_val[x] + '\" with lp ls ' + str((x+2)%9) + ',\\\n')
             else:
                 fp.write('\t\"\" using 1:' + str(x + 2) + ' title \"' + legend_val[x] + 
-                        '\" with lp,\\\n')
+                        '\" with lp ls ' + str((x+2)%9) + ',\\\n')
         elif chart_type[0] == 'bar':
             if x == 0:
                 # Only on the first line do we need to put plot command and xticlabels
-                fp.write('plot \"gnu_plot_data' + str(data_file_num) + '.dat\" using '
-                         + str(x + 2) + ':xticlabels(1) title \"' + legend_val[x] + '\\\n"') 
+                fp.write('plot \"' + file_name + str(data_file_num) + '.dat\" using '
+                         + str(x + 2) + ':xticlabels(1) title \"' + legend_val[x] + '\" ls 2,\\\n') 
             else:
-                fp.write('\t\"\" using ' + str(x + 2) + ' title \"' + legend_label[x] + 
-                "\"\\\n")
+                fp.write('\t\"\" using ' + str(x + 2) + ' title \"' + legend_val[x] + 
+                '\" ls ' + str(barchart_ls_offset) + ',\\\n')
+                if barchart_ls_offset + 2 > 8:
+                    barchart_ls_offset = 3
+                else:
+                    barchart_ls_offset += 2
   
     # Now adding labels if requested
     if all_labels:
@@ -132,8 +155,8 @@ def write_gnu_output(chart_title, chart_type, x_label, y_label, legend_val, x_va
                          '))) notitle with labels offset 0,0.5 font \"Helvtica,8\",\\\n')
         elif chart_type[0] == 'bar':
             for y in xrange(len(y_vals)):
-                fp.write('\t\"\" using 0:' + str(y + 2) + ':(sprintf(\"0.3f\",column(' + str(y + 2) +
-                         '))) notitle with labels offset 0,0.8 font \"Helvetica,8\",\\\n')
+                fp.write('\t\"\" using 0:' + str(y + 2) + ':(sprintf(\"%.3f\",column(' + str(y + 2) +
+                         '))) notitle with labels offset 0,0.3 font \"Helvetica,8\",\\\n')
 
     elif labels != None:
         labels_split = labels.split(',')
@@ -181,7 +204,7 @@ def determine_max_min_vals(x_vals, y_vals):
 
 
 def create_output_files(input_file, baseline, y_range_max,
-                        all_labels, labels):
+                        all_labels, labels, output_name):
 
     total_dataset = 0
     poi_per_dataset = 0
@@ -219,6 +242,12 @@ def create_output_files(input_file, baseline, y_range_max,
         curr_x_vals = []
         line_split = line.split(',')
         if 'x-title' in line_split[0]:
+            if 'DEL' in line_split[2]:
+                # This value is requested to be removed, so we
+                # are just going to skip the lines
+                for x in range(8):
+                    line = fp.readline()
+                continue
             x_labels.append(line_split[1])
             line = fp.readline()
             line_split = line.split(',')[0].split()
@@ -267,12 +296,13 @@ def create_output_files(input_file, baseline, y_range_max,
             if y_range_max != None:
                 # Manually setting y_max from command line
                 max_min_vals[1] = y_range_max
-            write_gnu_output_data([x_vals[x]], [y_vals[x]], x)
+            write_gnu_output_data([x_vals[x]], [y_vals[x]], x, output_name)
             write_gnu_output([chart_titles[x]], [chart_types[x]], 
                              [x_labels[x]], [y_labels[x]], [legend_vals[x]], 
                              [x_vals[x]], [y_vals[x]], [std_devs[x]], 
                              [std_errs[x]], max_min_vals[0], max_min_vals[1], 
-                             max_min_vals[2], x, baseline, all_labels, labels)
+                             max_min_vals[2], x, baseline, all_labels, labels, 
+                             output_name)
     else:
         # Just need to generate a single gnu data and plot file for all data sets     
         
@@ -281,10 +311,10 @@ def create_output_files(input_file, baseline, y_range_max,
         if y_range_max != None:
             # Manually setting y_max from command line
             max_min_vals[1] = y_range_max
-        write_gnu_output_data(x_vals, y_vals, 0)
+        write_gnu_output_data(x_vals, y_vals, 0, output_name)
         write_gnu_output(chart_titles, chart_types, x_labels, y_labels, legend_vals, x_vals, 
                          y_vals, std_devs, std_errs, max_min_vals[0], max_min_vals[1], 
-                         max_min_vals[2], 0, baseline, all_labels, labels)
+                         max_min_vals[2], 0, baseline, all_labels, labels, output_name)
 
 
 
@@ -298,10 +328,12 @@ def main():
                         help='String and value to create baseline on plot EX: \"Device Max,5031.931\"')
     parser.add_argument('-y', '--y_range_max', type=float,
                         help='Sets the maxium value on the y-axis of the gnuplot output')
-    parser.add_argument('-a', '--all_labels', dest='all_lables', action='store_true',
+    parser.add_argument('-a', '--all_labels', dest='all_labels', action='store_true',
                         help='If passed, will add labels to data points in the gnuplot output')
     parser.add_argument('-l', '--labels', type=str,
                         help='Adds labels only to the traces listed as the values from 1 to n seperated by commas')
+    parser.add_argument('-o', '--output_name', type=str,
+                        help='The output file names can be specified with this flag')
     parser.set_defaults(all_labels=False)
 
     try:
@@ -321,7 +353,8 @@ def main():
                         args.baseline,
                         args.y_range_max,
                         args.all_labels,
-                        args.labels)
+                        args.labels,
+                        args.output_name)
 
 if __name__ == '__main__':
     main()

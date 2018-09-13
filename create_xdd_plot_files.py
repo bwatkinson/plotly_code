@@ -381,7 +381,7 @@ def write_output_file_num_files_for_files(output_file_name, queries, threads, da
 
 
 def get_offsets(base_dir, offsets, queries):
-    zfs_list_ouput_present = False
+    zfs_list_output_present = False
     set_compress_size_offset = False
 
     # Just grabbing the first file as it doesn't really matter

@@ -86,8 +86,9 @@ def combine_files(input_data_files, point_of_interest, data_label_file):
     x_titles = []
     new_data_labels = [[] for x in xrange(len(data_labels))]
     y_vals = [[] for x in xrange(len(data_labels))]
-    
-    label_offset = 0
+
+     
+    label_offset = 0 
     for curr_file in input_data_files:
         curr_poi_offset = 0
         for curr_poi in point_of_interest:
@@ -96,7 +97,7 @@ def combine_files(input_data_files, point_of_interest, data_label_file):
                 while True:
                     while line != '' and 'x-title' not in line:
                         line = fp.readline()
-                
+    
                     if line == '':
                         break
                 
@@ -177,7 +178,7 @@ def combine_files(input_data_files, point_of_interest, data_label_file):
                         line = fp.readline()
                     curr_poi_offset += 1
                     label_offset += 1
-    
+   
     # Now writing out combined data output file
     write_new_output_file(chart_title,
                           x_titles, 

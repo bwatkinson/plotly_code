@@ -352,11 +352,16 @@ def create_graphs(file_name, excludes, set_base_line, y_range_max, plot_online, 
                 if curr_trace[0].type == 'bar':
                     curr_trace[0].text = [str(val) for val in curr_trace[0].y]
                     continue
-                curr_trace[0].opacity
                 if y_max in curr_trace[0].y:
-                    curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
+                    updated_y_text = list(curr_trace[0].text)
+                    updated_y_text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
+                    curr_trace[0].text = updated_y_text;
+                    #curr_trace[0].text[curr_trace[0].y.index(y_max)] = '<b>' + str(y_max) + '</b>'
                 if y_min in curr_trace[0].y:
-                    curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
+                    updated_y_test = list(curr_trace[0].text)
+                    updated_y_text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
+                    curr_trace[0].text = updated_y_text
+                    #curr_trace[0].text[curr_trace[0].y.index(y_min)] = '<b>' + str(y_min) + '</b>'
  
     
     if labels != None:
